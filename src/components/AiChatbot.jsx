@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Navigation, Sparkles, User } from 'lucide-react';
 import { processAiQuery } from '../data/aiKnowledgeBase';
 
-export default function AiChatbot({ onSelectDestination, currentLocation }) {
+export default function AiChatbot({ onSelectDestination, currentLocation, doctors = [] }) {
   const [isOpen, setIsOpen]       = useState(false);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping]   = useState(false);
@@ -10,8 +10,8 @@ export default function AiChatbot({ onSelectDestination, currentLocation }) {
     {
       id: 1,
       sender: 'bot',
-      text: "Hello! I am **Navi AI**, your smart hospital assistant. 🏥\n\nHow can I help you today? You can describe your symptoms or ask for any department.",
-      suggestions: ["Where is Pharmacy?", "I have a severe headache", "Visiting hours", "Find Emergency Care"],
+      text: "Hello! I am **Navi AI**, your smart hospital assistant for **Manipal Hospital**. 🏥\n\nYou can ask about symptoms, find departments, or check if specific doctors (e.g. *Dr. Rajesh Sharma*) are available today!",
+      suggestions: ["Is Dr. Rajesh Sharma available?", "I am vomiting / stomach pain", "Where is Pharmacy?", "Visiting hours"],
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -40,7 +40,7 @@ export default function AiChatbot({ onSelectDestination, currentLocation }) {
     setIsTyping(true);
 
     setTimeout(() => {
-      const response = processAiQuery(text);
+      const response = processAiQuery(text, doctors);
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',

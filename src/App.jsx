@@ -67,6 +67,40 @@ export default function App() {
   const [destination, setDestination]  = useState(initialState.destination);
   const [doctors, setDoctors]          = useState(INITIAL_DOCTORS);
 
+  // Admin PIN Security State
+  const [isAdminUnlocked, setIsAdminUnlocked]     = useState(false);
+  const [showPinModal, setShowPinModal]           = useState(false);
+  const [pinInput, setPinInput]                   = useState('');
+  const [pinError, setPinError]                   = useState(false);
+
+  function handleAdminClick() {
+    if (screen === 'admin') {
+      // Locking admin when exiting
+      setIsAdminUnlocked(false);
+      setScreen('scan');
+    } else {
+      if (isAdminUnlocked) {
+        setScreen('admin');
+      } else {
+        setShowPinModal(true);
+        setPinInput('');
+        setPinError(false);
+      }
+    }
+  }
+
+  function handlePinSubmit(e) {
+    e.preventDefault();
+    if (pinInput === '1234') { // Default Admin PIN
+      setIsAdminUnlocked(true);
+      setShowPinModal(false);
+      setScreen('admin');
+      setPinError(false);
+    } else {
+      setPinError(true);
+    }
+  }
+
   function handleLocationScanned(loc) {
     setLocation(loc);
     setScreen('select');
@@ -114,7 +148,7 @@ export default function App() {
           </div>
 
           <button
-            onClick={() => setScreen(s => s === 'admin' ? 'scan' : 'admin')}
+            onClick={handleAdminClick}
             style={{
               background: screen === 'admin' ? '#fff' : 'rgba(255,255,255,0.2)',
               color: screen === 'admin' ? 'var(--color-primary)' : '#fff',
@@ -124,7 +158,7 @@ export default function App() {
             }}
           >
             <ShieldAlert size={14} />
-            {screen === 'admin' ? 'App View' : 'Admin'}
+            {screen === 'admin' ? 'App View' : 'Admin 🔒'}
           </button>
         </div>
 
@@ -192,7 +226,78 @@ export default function App() {
       <AiChatbot
         currentLocation={currentLocation}
         onSelectDestination={handleAiDestinationSelect}
+        doctors={doctors}
       />
+
+      {/* 🔒 Admin Security PIN Modal */}
+      {showPinModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 99999,
+          background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
+        }}>
+          <div style={{
+            background: 'white', color: '#1e293b', borderRadius: 20,
+            maxWidth: 380, width: '100%', padding: 24, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)',
+            display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center'
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #0f172a, #0077B6)',
+              margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <ShieldAlert size={28} color="#fff" />
+            </div>
+
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>Admin Authentication</h3>
+              <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                Enter 4-digit PIN to access Hospital Admin Portal
+              </p>
+            </div>
+
+            <form onSubmit={handlePinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input
+                type="password"
+                maxLength={6}
+                value={pinInput}
+                onChange={e => { setPinInput(e.target.value); setPinError(false); }}
+                placeholder="Enter Admin PIN (Default: 1234)"
+                autoFocus
+                style={{
+                  padding: '12px 16px', fontSize: '1.2rem', textAlign: 'center', letterSpacing: '0.3em',
+                  border: pinError ? '2px solid #ef476f' : '2px solid #cbd5e1', borderRadius: 12, outline: 'none'
+                }}
+              />
+
+              {pinError && (
+                <p style={{ margin: 0, color: '#ef476f', fontSize: '0.78rem', fontWeight: 700 }}>
+                  ❌ Invalid Admin PIN. Access Denied.
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setShowPinModal(false)}
+                  style={{ flex: 1, padding: 12, fontSize: '0.88rem' }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={!pinInput.trim()}
+                  style={{ flex: 1, padding: 12, fontSize: '0.88rem' }}
+                >
+                  Unlock Admin
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

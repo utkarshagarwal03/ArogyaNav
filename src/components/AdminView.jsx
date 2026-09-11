@@ -243,3 +243,4 @@ export default function AdminView({ doctors, onUpdateDoctorStatus, onBackToApp }
     </div>
   );
 }
+

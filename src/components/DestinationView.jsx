@@ -99,6 +99,12 @@ export default function DestinationView({ currentLocation, onDestinationSelected
               <div className="dept-info">
                 <h3>{dept.name}</h3>
                 <p>{dept.description}</p>
+                {/* Doctor Names List */}
+                {doctors.filter(d => d.deptId === dept.id).length > 0 && (
+                  <p style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 600, margin: '4px 0 2px' }}>
+                    👨‍⚕️ {doctors.filter(d => d.deptId === dept.id).map(d => d.name).join(', ')}
+                  </p>
+                )}
                 {getDocBadge(dept.id)}
               </div>
               <span className="dept-floor">{dept.floor}</span>

@@ -123,30 +123,78 @@ const FAQ_LIST = [
   }
 ];
 
-export function processAiQuery(userText) {
+export function processAiQuery(userText, doctors = []) {
   const query = userText.toLowerCase().trim();
 
   // 1. Direct greeting check
   if (['hi', 'hello', 'hey', 'start', 'help', 'good morning', 'good afternoon'].includes(query)) {
     return {
       text: "Hello! I am **Navi AI**, your assistant for **Manipal Hospital, HAL Old Airport Road, Bengaluru**. 🏥\n\nHow can I help you navigate or find care today?",
-      suggestions: ["I am vomiting / stomach pain", "Where is the Pharmacy?", "I have a severe headache", "Visiting hours"]
+      suggestions: ["Is Dr. Rajesh Sharma available?", "I am vomiting / stomach pain", "Where is Pharmacy?", "Visiting hours"]
     };
   }
 
-  // 2. Symptom / Department search
+  // 2. Specific Named Doctor Check (e.g. "meet Dr. Rajesh", "Dr. Anita Deshmukh available?", "is Dr. Priya on leave?")
+  if (doctors.length > 0) {
+    const matchedDoc = doctors.find(d => {
+      const nameLower = d.name.toLowerCase();
+      const lastName  = nameLower.split(' ').pop();
+      const firstName = nameLower.replace('dr.', '').trim().split(' ')[0];
+      return query.includes(nameLower) || (lastName && lastName.length > 3 && query.includes(lastName)) || (firstName && firstName.length > 3 && query.includes(firstName));
+    });
+
+    if (matchedDoc) {
+      const dept = DEPARTMENTS.find(d => d.id === matchedDoc.deptId);
+      const otherAvailable = doctors.filter(d => d.deptId === matchedDoc.deptId && d.id !== matchedDoc.id && d.status === 'available');
+
+      if (matchedDoc.status === 'available') {
+        return {
+          text: `👨‍⚕️ **${matchedDoc.name}** (${matchedDoc.spec})\n• Status: 🟢 **Available Today**\n• Department: **${dept?.name}** (${dept?.floor}, ${dept?.wing})\n\nDoctor is currently available for consultation.`,
+          targetDepartment: dept,
+          suggestions: [`Navigate to ${dept?.shortName}`, "Show doctor attendance", "Visiting hours"]
+        };
+      } else if (matchedDoc.status === 'in_surgery') {
+        return {
+          text: `👨‍⚕️ **${matchedDoc.name}** (${matchedDoc.spec})\n• Status: 🟡 **In Surgery / Consultation**\n• Department: **${dept?.name}** (${dept?.floor}, ${dept?.wing})\n\nDoctor is currently attending a surgery or consultation. You can navigate to the department waiting lounge.`,
+          targetDepartment: dept,
+          suggestions: [`Navigate to ${dept?.shortName}`, "Visiting hours"]
+        };
+      } else {
+        // On Leave
+        const altText = otherAvailable.length > 0
+          ? `\n\nOther available specialists in **${dept?.name}**:\n${otherAvailable.map(d => `• 🟢 **${d.name}** (${d.spec})`).join('\n')}`
+          : `\n\nNo other specialists are currently on duty in this department.`;
+
+        return {
+          text: `👨‍⚕️ **${matchedDoc.name}** (${matchedDoc.spec})\n• Status: 🔴 **On Leave Today**${altText}`,
+          targetDepartment: dept,
+          suggestions: [`Navigate to ${dept?.shortName}`, "Emergency Care", "Visiting hours"]
+        };
+      }
+    }
+  }
+
+  // 3. Symptom / Department search
   for (const item of SYMPTOM_MAP) {
     if (item.keywords.some(kw => query.includes(kw))) {
       const dept = DEPARTMENTS.find(d => d.id === item.deptId);
+      const deptDocs = doctors.filter(d => d.deptId === dept?.id);
+      const availableDocs = deptDocs.filter(d => d.status === 'available');
+
+      let docInfo = '';
+      if (availableDocs.length > 0) {
+        docInfo = `\n\n👨‍⚕️ **Available Doctors On Duty**:\n${availableDocs.map(d => `• 🟢 **${d.name}** (${d.spec})`).join('\n')}`;
+      }
+
       return {
-        text: `Based on your query, here is the recommended department at Manipal Hospital:\n\n📍 **${dept?.name}** (${dept?.floor}, ${dept?.wing})\n${item.recommendation}`,
+        text: `Based on your query, here is the recommended department at Manipal Hospital:\n\n📍 **${dept?.name}** (${dept?.floor}, ${dept?.wing})\n${item.recommendation}${docInfo}`,
         targetDepartment: dept,
         suggestions: [`Navigate to ${dept?.shortName}`, "Show all departments", "Visiting hours"]
       };
     }
   }
 
-  // 3. FAQ check
+  // 4. FAQ check
   for (const faq of FAQ_LIST) {
     if (faq.keywords.some(kw => query.includes(kw))) {
       return {
@@ -156,18 +204,26 @@ export function processAiQuery(userText) {
     }
   }
 
-  // 4. Department direct name match
+  // 5. Department direct name match
   for (const dept of DEPARTMENTS) {
     if (query.includes(dept.shortName.toLowerCase()) || query.includes(dept.name.toLowerCase())) {
+      const deptDocs = doctors.filter(d => d.deptId === dept.id);
+      const availableDocs = deptDocs.filter(d => d.status === 'available');
+
+      let docInfo = '';
+      if (availableDocs.length > 0) {
+        docInfo = `\n• Available Doctors: ${availableDocs.map(d => d.name).join(', ')}`;
+      }
+
       return {
-        text: `📍 **${dept.name}**\n• Location: ${dept.floor}, ${dept.wing}\n• Details: ${dept.description}`,
+        text: `📍 **${dept.name}**\n• Location: ${dept.floor}, ${dept.wing}\n• Details: ${dept.description}${docInfo}`,
         targetDepartment: dept,
         suggestions: [`Navigate to ${dept.shortName}`, "Show other departments"]
       };
     }
   }
 
-  // 5. Intelligent Medical Fallback for general symptom questions
+  // 6. Intelligent Medical Fallback
   const defaultOpd = DEPARTMENTS.find(d => d.id === 'DEPT-002'); // OPD
   return {
     text: "For general symptoms or feeling unwell, please visit our **Outpatient Department (OPD)** on the 1st Floor, Wing C for a doctor consultation. If you are experiencing acute severe distress or a medical emergency, head directly to **Emergency & Trauma** (Block B).",
