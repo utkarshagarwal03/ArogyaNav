@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { generateRoute, HOSPITAL_INFO } from '../data/hospitalData';
+import BuildingMap from './BuildingMap';
 import {
   ArrowUp, ArrowLeft, ArrowRight, CheckCircle,
-  Clock, Ruler, QrCode, ChevronDown, ChevronUp, ExternalLink, MapPin
+  Clock, Ruler, QrCode, ChevronDown, ChevronUp, ExternalLink, MapPin, Map, Compass
 } from 'lucide-react';
 
 const DIRECTION_CONFIG = {
@@ -17,6 +18,7 @@ export default function NavigationView({ currentLocation, destination, onScanAga
   const [route, setRoute]       = useState(null);
   const [stepIdx, setStepIdx]   = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState('directions'); // 'directions' | 'map'
 
   useEffect(() => {
     setLoading(true);
@@ -55,21 +57,54 @@ export default function NavigationView({ currentLocation, destination, onScanAga
         </div>
       </div>
 
-      {/* Hospital Campus Map Bar */}
-      <div style={{
-        background: 'var(--color-surface-2)', border: '1px solid #b3d9f5', borderRadius: 'var(--radius-md)',
-        padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-primary)', fontWeight: 600 }}>
-          <MapPin size={14} />
-          <span>{HOSPITAL_INFO.name}, {HOSPITAL_INFO.campus}</span>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <a href={HOSPITAL_INFO.mapsLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
-            Google Maps <ExternalLink size={11} />
-          </a>
-        </div>
+      {/* View Mode Switcher: Directions vs 3-Floor Building Map */}
+      <div style={{ display: 'flex', gap: 6, background: 'var(--color-surface-2)', padding: 4, borderRadius: 'var(--radius-md)' }}>
+        <button
+          onClick={() => setViewMode('directions')}
+          style={{
+            flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, border: 'none', cursor: 'pointer',
+            background: viewMode === 'directions' ? 'var(--color-primary)' : 'transparent',
+            color: viewMode === 'directions' ? '#fff' : '#64748b',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+          }}
+        >
+          <Compass size={16} /> Turn-by-Turn
+        </button>
+        <button
+          onClick={() => setViewMode('map')}
+          style={{
+            flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, border: 'none', cursor: 'pointer',
+            background: viewMode === 'map' ? 'var(--color-primary)' : 'transparent',
+            color: viewMode === 'map' ? '#fff' : '#64748b',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+          }}
+        >
+          <Map size={16} /> 3-Floor Map View
+        </button>
       </div>
+
+      {viewMode === 'map' ? (
+        <BuildingMap
+          currentLocation={currentLocation}
+          destination={destination}
+        />
+      ) : (
+        <>
+          {/* Hospital Campus Map Bar */}
+          <div style={{
+            background: 'var(--color-surface-2)', border: '1px solid #b3d9f5', borderRadius: 'var(--radius-md)',
+            padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-primary)', fontWeight: 600 }}>
+              <MapPin size={14} />
+              <span>{HOSPITAL_INFO.name}, {HOSPITAL_INFO.campus}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <a href={HOSPITAL_INFO.mapsLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+                Google Maps <ExternalLink size={11} />
+              </a>
+            </div>
+          </div>
 
       {/* Meta chips */}
       <div className="nav-meta">
@@ -170,6 +205,8 @@ export default function NavigationView({ currentLocation, destination, onScanAga
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Scan Again */}
       <button className="btn btn-outline" onClick={onScanAgain} id="scan-again-btn">

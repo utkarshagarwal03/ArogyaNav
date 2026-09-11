@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { DEPARTMENTS } from '../data/hospitalData';
-import { Search, MapPin, ChevronRight } from 'lucide-react';
+import BuildingMap from './BuildingMap';
+import { Search, MapPin, ChevronRight, List, Map } from 'lucide-react';
 
 export default function DestinationView({ currentLocation, onDestinationSelected, doctors = [] }) {
   const [query, setQuery] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
 
   const filtered = useMemo(() => {
     if (!query.trim()) return DEPARTMENTS;
@@ -58,23 +60,56 @@ export default function DestinationView({ currentLocation, onDestinationSelected
 
       <div>
         <h2 className="view-title">Where do you want to go?</h2>
-        <p className="view-subtitle">Search for a department, ward, or service below.</p>
+        <p className="view-subtitle">Search for a department or select from the 3-Floor interactive map below.</p>
       </div>
 
-      {/* Search */}
-      <div className="search-bar-wrapper">
-        <Search size={20} className="search-icon" />
-        <input
-          id="destination-search"
-          type="search"
-          className="search-bar"
-          placeholder="e.g. Cardiology, Pharmacy, OPD…"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          autoComplete="off"
-          aria-label="Search departments"
-        />
+      {/* View Mode Switcher */}
+      <div style={{ display: 'flex', gap: 6, background: 'var(--color-surface-2)', padding: 4, borderRadius: 'var(--radius-md)' }}>
+        <button
+          onClick={() => setViewMode('list')}
+          style={{
+            flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, border: 'none', cursor: 'pointer',
+            background: viewMode === 'list' ? 'var(--color-primary)' : 'transparent',
+            color: viewMode === 'list' ? '#fff' : '#64748b',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+          }}
+        >
+          <List size={16} /> Department List
+        </button>
+        <button
+          onClick={() => setViewMode('map')}
+          style={{
+            flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, border: 'none', cursor: 'pointer',
+            background: viewMode === 'map' ? 'var(--color-primary)' : 'transparent',
+            color: viewMode === 'map' ? '#fff' : '#64748b',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+          }}
+        >
+          <Map size={16} /> 3-Floor Visual Map
+        </button>
       </div>
+
+      {viewMode === 'map' ? (
+        <BuildingMap
+          currentLocation={currentLocation}
+          onSelectRoom={dept => onDestinationSelected(dept)}
+        />
+      ) : (
+        <>
+          {/* Search */}
+          <div className="search-bar-wrapper">
+            <Search size={20} className="search-icon" />
+            <input
+              id="destination-search"
+              type="search"
+              className="search-bar"
+              placeholder="e.g. Cardiology, Pharmacy, OPD…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              autoComplete="off"
+              aria-label="Search departments"
+            />
+          </div>
 
       {/* Department List */}
       <div className="dept-list" role="listbox" aria-label="Department list">
@@ -113,6 +148,8 @@ export default function DestinationView({ currentLocation, onDestinationSelected
           ))
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
