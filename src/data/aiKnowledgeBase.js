@@ -3,12 +3,12 @@ import { DEPARTMENTS } from './hospitalData';
 // Comprehensive Symptom & intent mapping database for Manipal Hospital HAL Road Bengaluru
 const SYMPTOM_MAP = [
   {
-    keywords: ['vomit', 'vomiting', 'nausea', 'stomach ache', 'stomach pain', 'abdominal pain', 'diarrhea', 'loose motion', 'acidity', 'indigestion', 'food poisoning', 'gas', 'ulcer', 'gastro', 'gut'],
+    keywords: ['vomit', 'vomiting', 'nausea', 'stomach ache', 'stomach pain', 'abdominal pain', 'diarrhea', 'loose motion', 'acidity', 'indigestion', 'food poisoning', 'gas', 'ulcer', 'gastro', 'gut', 'fever'],
     deptId: 'DEPT-002', // OPD / General Medicine
-    recommendation: 'For symptoms like vomiting, nausea, stomach pain, or digestive discomfort, please visit Outpatient Department (OPD) Consultation on 1st Floor, Wing C. If vomiting is severe or accompanied by dehydration, visit Emergency Block B immediately.'
+    recommendation: 'For symptoms like vomiting, nausea, stomach pain, fever, or digestive discomfort, visit Outpatient Department (OPD) Consultation on 1st Floor, Wing C. If vomiting is severe or accompanied by extreme weakness, proceed directly to Emergency Block B.'
   },
   {
-    keywords: ['chest pain', 'heart attack', 'cardiac', 'breathless', 'palpitations', 'heart', 'bp', 'blood pressure'],
+    keywords: ['chest pain', 'heart attack', 'cardiac', 'breathless', 'palpitations', 'heart', 'bp', 'blood pressure', 'angina'],
     deptId: 'DEPT-005', // Cardiology
     recommendation: 'For heart-related symptoms or chest discomfort, visit Cardiology & Cath Lab on 2nd Floor, Wing D. If urgent or severe, proceed directly to Emergency Block B.'
   },
@@ -25,77 +25,107 @@ const SYMPTOM_MAP = [
   {
     keywords: ['blood test', 'urine test', 'lab', 'pathology', 'report', 'test result', 'blood work', 'sample', 'cbc', 'sugar test'],
     deptId: 'DEPT-004', // Laboratory
-    recommendation: 'Central Diagnostics Lab & sample collection counter is located on Ground Floor, Tower A.'
+    recommendation: 'Central Diagnostics Lab & sample collection counter is located on Ground Floor, Block B.'
   },
   {
     keywords: ['bone', 'fracture', 'joint pain', 'back pain', 'knee', 'spine', 'ortho', 'sprain', 'ligament', 'arthritis'],
     deptId: 'DEPT-006', // Orthopaedics
-    recommendation: 'For bone, joint, or spine concerns, visit Orthopaedics on the 3rd Floor, Wing E.'
+    recommendation: 'For bone, joint, or spine concerns, visit Orthopaedics & Spine Center on 3rd Floor, Wing E.'
   },
   {
     keywords: ['child', 'baby', 'kid', 'infant', 'pediatric', 'paediatric', 'vaccination', 'vaccine', 'newborn'],
     deptId: 'DEPT-008', // Paediatrics
-    recommendation: 'Paediatric care and child immunisation are available on the 2nd Floor, Wing C.'
+    recommendation: 'Paediatric care and child immunisation are available at Paediatrics & NICU Suite on 2nd Floor, Wing C.'
   },
   {
     keywords: ['headache', 'migraine', 'dizziness', 'seizure', 'paralysis', 'nerve', 'brain', 'neurology', 'neuro', 'numbness', 'stroke'],
     deptId: 'DEPT-009', // Neurology
-    recommendation: 'For brain, nerve, stroke, or severe headache care, visit Neurology on the 3rd Floor, Wing D.'
+    recommendation: 'For brain, nerve, stroke, or severe headache care, visit Neurology on 3rd Floor, Wing D.'
   },
   {
     keywords: ['skin', 'rash', 'itching', 'eczema', 'allergy', 'hives', 'boil', 'fungal', 'acne', 'dermatology'],
-    deptId: 'DEPT-002', // OPD / Dermatology
-    recommendation: 'For skin rashes, allergies, or dermatological consultations, visit Outpatient Clinics (OPD) on 1st Floor, Wing C.'
+    deptId: 'DEPT-017', // Dermatology
+    recommendation: 'For skin rashes, allergies, or dermatological consultations, visit Dermatology & Skin Center on 1st Floor, Wing C.'
   },
   {
-    keywords: ['ear pain', 'sore throat', 'nasal', 'sinus', 'tonsil', 'hearing', 'nosebleed', 'throat', 'ent', 'cold', 'cough', 'flu'],
-    deptId: 'DEPT-002', // OPD / ENT & General Medicine
-    recommendation: 'For throat infection, cold, cough, ear pain, or ENT concerns, visit Outpatient Clinics (OPD) on 1st Floor, Wing C.'
+    keywords: ['ear pain', 'ear ache', 'sore throat', 'nasal', 'sinus', 'tonsil', 'hearing', 'nosebleed', 'throat', 'ent', 'cold', 'cough', 'flu'],
+    deptId: 'DEPT-015', // ENT
+    recommendation: 'For throat infection, cold, cough, ear pain, or ENT concerns, visit ENT Care Suite on 1st Floor, Wing C.'
   },
   {
-    keywords: ['eye pain', 'vision', 'blur', 'red eye', 'cataract', 'eye', 'conjunctivitis'],
-    deptId: 'DEPT-002', // OPD / Ophthalmology
-    recommendation: 'For eye irritation, vision tests, or ophthalmology checkups, visit Outpatient Department (OPD) on 1st Floor, Wing C.'
+    keywords: ['eye pain', 'vision', 'blur', 'red eye', 'cataract', 'eye', 'conjunctivitis', 'optical'],
+    deptId: 'DEPT-016', // Ophthalmology
+    recommendation: 'For eye irritation, vision tests, or ophthalmology checkups, visit Ophthalmology & Eye Care on 1st Floor, Wing C.'
   },
   {
-    keywords: ['toothache', 'teeth', 'gum pain', 'dental', 'cavity'],
-    deptId: 'DEPT-002', // OPD / Dental
-    recommendation: 'For tooth pain or dental procedures, visit Dental OPD on 1st Floor, Wing C.'
+    keywords: ['toothache', 'teeth', 'gum pain', 'dental', 'cavity', 'root canal', 'braces'],
+    deptId: 'DEPT-018', // Dental
+    recommendation: 'For tooth pain or dental procedures, visit Dental & Maxillofacial Care on 1st Floor, Wing C.'
   },
   {
-    keywords: ['pregnancy', 'period pain', 'menstrual', 'gynae', 'gynecology', 'maternity', 'pregnant'],
-    deptId: 'DEPT-002', // OPD / Gynaecology
-    recommendation: 'For maternity, pregnancy care, or gynaecological checkups, visit Outpatient Department (OPD) on 1st Floor, Wing C.'
+    keywords: ['pregnancy', 'period pain', 'menstrual', 'gynae', 'gynecology', 'maternity', 'pregnant', 'delivery'],
+    deptId: 'DEPT-019', // Gynaecology
+    recommendation: 'For maternity, pregnancy care, or gynaecological checkups, visit Obstetrics & Gynaecology on 2nd Floor, Wing C.'
   },
   {
-    keywords: ['kidney', 'urine pain', 'burning urination', 'kidney stone', 'bladder'],
-    deptId: 'DEPT-002', // OPD / Urology
-    recommendation: 'For urinary tract or kidney stone concerns, visit Nephrology & Urology OPD on 1st Floor, Wing C.'
+    keywords: ['dialysis', 'kidney failure', 'renal', 'kidney stone', 'kidney pain', 'nephrology'],
+    deptId: 'DEPT-014', // Nephrology & Dialysis
+    recommendation: 'For kidney care or hemodialysis, visit Nephrology & Dialysis Center on 2nd Floor, Wing D.'
   },
   {
-    keywords: ['anxiety', 'stress', 'depression', 'panic', 'insomnia', 'sleep', 'mental health'],
-    deptId: 'DEPT-002', // OPD / Behavioral Health
-    recommendation: 'For mental health support, stress, or sleep consultations, visit Psychiatry OPD on 1st Floor, Wing C.'
+    keywords: ['cancer', 'oncology', 'chemo', 'chemotherapy', 'radiation', 'tumor', 'biopsy', 'lump'],
+    deptId: 'DEPT-013', // Oncology
+    recommendation: 'For cancer treatment, chemotherapy, or oncology consultations, visit Oncology & Cancer Care on 3rd Floor, Wing E.'
+  },
+  {
+    keywords: ['surgery', 'operation', 'robotic surgery', 'laparoscopic', 'ot complex'],
+    deptId: 'DEPT-010', // Robotic Surgery
+    recommendation: 'For surgical evaluation and pre-op holding, visit Robotic & General Surgery OT Complex on 4th Floor, Wing F.'
+  },
+  {
+    keywords: ['blood bank', 'plasma', 'donor', 'blood donor', 'platelet', 'blood unit'],
+    deptId: 'DEPT-021', // Blood Bank
+    recommendation: 'The Central Blood Bank & Plasma Unit is operational 24/7 at Basement Level B1.'
+  },
+  {
+    keywords: ['organ transplant', 'liver transplant', 'kidney transplant', 'transplant', 'donation'],
+    deptId: 'DEPT-022', // Organ Transplant
+    recommendation: 'For organ transplant evaluation and recovery ICU, visit Organ Transplant Unit on 4th Floor, Wing F.'
+  },
+  {
+    keywords: ['billing', 'insurance', 'claim', 'tpa', 'cashless', 'payment desk', 'bill refund'],
+    deptId: 'DEPT-024', // Billing & Insurance
+    recommendation: 'For cashless approvals, insurance claim processing, and billing, visit Billing, Insurance & TPA Desk on Ground Floor, Tower A.'
+  },
+  {
+    keywords: ['anxiety', 'stress', 'depression', 'panic', 'insomnia', 'sleep', 'mental health', 'psychiatry'],
+    deptId: 'DEPT-020', // Psychiatry
+    recommendation: 'For mental health support, counseling, or sleep consultations, visit Psychiatry & Behavioral Health on 1st Floor, Wing C.'
   },
   {
     keywords: ['medicine', 'pharmacy', 'chemist', 'pills', 'prescription', 'drugstore', 'meds', 'tablet'],
     deptId: 'DEPT-007', // Pharmacy
-    recommendation: 'Manipal 24/7 In-House Pharmacy is located on the Ground Floor, Tower A near the Main Entrance.'
+    recommendation: 'Manipal 24/7 In-House Pharmacy is located on Ground Floor, Tower A near the Main Entrance.'
   },
   {
     keywords: ['food', 'lunch', 'coffee', 'tea', 'snack', 'cafeteria', 'canteen', 'eat', 'restaurant', 'juice'],
     deptId: 'DEPT-012', // Cafeteria
-    recommendation: 'The Garden Court Cafeteria serves hot meals, coffee, and refreshments on the Ground Floor, Tower A.'
+    recommendation: 'The Garden Court Cafeteria serves hot meals, coffee, and refreshments on Ground Floor, Block B.'
   },
   {
     keywords: ['physio', 'rehab', 'exercise', 'muscle pain', 'physical therapy'],
     deptId: 'DEPT-011', // Physiotherapy
-    recommendation: 'Physiotherapy & Rehabilitation Center is on 1st Floor, Block B.'
+    recommendation: 'Physiotherapy & Rehabilitation Center is located on 1st Floor, Block B.'
   },
   {
-    keywords: ['doctor consultation', 'opd', 'general checkup', 'fever', 'consultation', 'checkup', 'sick', 'unwell'],
+    keywords: ['wheelchair', 'stretchers', 'mobility', 'handicap', 'disabled', 'assistance desk'],
+    deptId: 'DEPT-025', // Wheelchair Desk
+    recommendation: 'Free wheelchairs and mobility support attendants are available at Wheelchair Desk on Ground Floor, Tower A Portico.'
+  },
+  {
+    keywords: ['doctor consultation', 'opd', 'general checkup', 'consultation', 'checkup', 'sick', 'unwell'],
     deptId: 'DEPT-002', // OPD
-    recommendation: 'OPD specialist consultation clinics are located on the 1st Floor, Wing C.'
+    recommendation: 'OPD specialist consultation clinics are located on 1st Floor, Wing C.'
   },
 ];
 
