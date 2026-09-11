@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { DEPARTMENTS } from '../data/hospitalData';
 import { Search, MapPin, ChevronRight } from 'lucide-react';
 
-export default function DestinationView({ currentLocation, onDestinationSelected }) {
+export default function DestinationView({ currentLocation, onDestinationSelected, doctors = [] }) {
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -14,6 +14,35 @@ export default function DestinationView({ currentLocation, onDestinationSelected
       d.floor.toLowerCase().includes(q)
     );
   }, [query]);
+
+  // Compute doctor availability count per department
+  function getDocBadge(deptId) {
+    const deptDocs = doctors.filter(doc => doc.deptId === deptId);
+    if (deptDocs.length === 0) return null;
+
+    const availableCount = deptDocs.filter(doc => doc.status === 'available').length;
+    const inSurgeryCount = deptDocs.filter(doc => doc.status === 'in_surgery').length;
+
+    if (availableCount > 0) {
+      return (
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059173', background: '#e6faf5', padding: '2px 8px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 4, width: 'fit-content', marginTop: 4 }}>
+          🟢 {availableCount} Doctor{availableCount > 1 ? 's' : ''} Available
+        </span>
+      );
+    } else if (inSurgeryCount > 0) {
+      return (
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#d97706', background: '#fef3c7', padding: '2px 8px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 4, width: 'fit-content', marginTop: 4 }}>
+          🟡 Doctors In Surgery / OPD
+        </span>
+      );
+    } else {
+      return (
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#c0244b', background: '#fde8ee', padding: '2px 8px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 4, width: 'fit-content', marginTop: 4 }}>
+          🔴 Doctor On Leave
+        </span>
+      );
+    }
+  }
 
   return (
     <div className="view">
@@ -70,6 +99,7 @@ export default function DestinationView({ currentLocation, onDestinationSelected
               <div className="dept-info">
                 <h3>{dept.name}</h3>
                 <p>{dept.description}</p>
+                {getDocBadge(dept.id)}
               </div>
               <span className="dept-floor">{dept.floor}</span>
               <ChevronRight size={18} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />

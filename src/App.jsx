@@ -4,8 +4,9 @@ import QrScannerView    from './components/QrScannerView';
 import DestinationView  from './components/DestinationView';
 import NavigationView   from './components/NavigationView';
 import AiChatbot        from './components/AiChatbot';
-import { HOSPITAL_LOCATIONS, DEPARTMENTS, HOSPITAL_INFO } from './data/hospitalData';
-import { QrCode, MapPin, Navigation, Check, ExternalLink } from 'lucide-react';
+import AdminView        from './components/AdminView';
+import { HOSPITAL_LOCATIONS, DEPARTMENTS, HOSPITAL_INFO, INITIAL_DOCTORS } from './data/hospitalData';
+import { QrCode, MapPin, Navigation, Check, ExternalLink, ShieldAlert } from 'lucide-react';
 
 const STEPS = [
   { id: 'scan',    label: 'Scan',        icon: QrCode },
@@ -14,6 +15,8 @@ const STEPS = [
 ];
 
 function StepBar({ currentStep }) {
+  if (currentStep === 'admin') return null;
+
   const currentIdx = STEPS.findIndex(s => s.id === currentStep);
   return (
     <div className="step-bar" role="navigation" aria-label="Progress">
@@ -59,9 +62,10 @@ function getInitialState() {
 
 export default function App() {
   const [initialState]                = useState(getInitialState);
-  const [screen, setScreen]           = useState(initialState.screen);
+  const [screen, setScreen]           = useState(initialState.screen); // 'scan' | 'select' | 'navigate' | 'admin'
   const [currentLocation, setLocation] = useState(initialState.location);
   const [destination, setDestination]  = useState(initialState.destination);
+  const [doctors, setDoctors]          = useState(INITIAL_DOCTORS);
 
   function handleLocationScanned(loc) {
     setLocation(loc);
@@ -81,6 +85,10 @@ export default function App() {
     setScreen('navigate');
   }
 
+  function handleUpdateDoctorStatus(docId, newStatus) {
+    setDoctors(prev => prev.map(doc => doc.id === docId ? { ...doc, status: newStatus } : doc));
+  }
+
   function handleScanAgain() {
     // Clear URL parameters without reloading page
     if (window.history.pushState) {
@@ -96,12 +104,28 @@ export default function App() {
     <div className="app-shell">
       {/* Header */}
       <header className="app-header" role="banner">
-        <div className="header-inner">
-          <div className="header-logo" aria-hidden="true">🏥</div>
-          <div className="header-brand">
-            <h1>ArogyaNav</h1>
-            <p>Smart Indoor Navigation</p>
+        <div className="header-inner" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="header-logo" aria-hidden="true">🏥</div>
+            <div className="header-brand">
+              <h1>ArogyaNav</h1>
+              <p>Smart Indoor Navigation</p>
+            </div>
           </div>
+
+          <button
+            onClick={() => setScreen(s => s === 'admin' ? 'scan' : 'admin')}
+            style={{
+              background: screen === 'admin' ? '#fff' : 'rgba(255,255,255,0.2)',
+              color: screen === 'admin' ? 'var(--color-primary)' : '#fff',
+              border: 'none', borderRadius: 20, padding: '6px 12px',
+              fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.2s'
+            }}
+          >
+            <ShieldAlert size={14} />
+            {screen === 'admin' ? 'App View' : 'Admin'}
+          </button>
         </div>
 
         {/* Hospital Location Sub-header */}
@@ -133,34 +157,42 @@ export default function App() {
         </div>
       </header>
 
-        {/* Step Progress */}
-        <StepBar currentStep={screen} />
+      {/* Step Progress */}
+      <StepBar currentStep={screen} />
 
-        {/* Main Content */}
-        <main id="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {screen === 'scan' && (
-            <QrScannerView onLocationScanned={handleLocationScanned} />
-          )}
-          {screen === 'select' && (
-            <DestinationView
-              currentLocation={currentLocation}
-              onDestinationSelected={handleDestinationSelected}
-            />
-          )}
-          {screen === 'navigate' && (
-            <NavigationView
-              currentLocation={currentLocation}
-              destination={destination}
-              onScanAgain={handleScanAgain}
-            />
-          )}
-        </main>
+      {/* Main Content */}
+      <main id="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {screen === 'scan' && (
+          <QrScannerView onLocationScanned={handleLocationScanned} />
+        )}
+        {screen === 'select' && (
+          <DestinationView
+            currentLocation={currentLocation}
+            onDestinationSelected={handleDestinationSelected}
+            doctors={doctors}
+          />
+        )}
+        {screen === 'navigate' && (
+          <NavigationView
+            currentLocation={currentLocation}
+            destination={destination}
+            onScanAgain={handleScanAgain}
+          />
+        )}
+        {screen === 'admin' && (
+          <AdminView
+            doctors={doctors}
+            onUpdateDoctorStatus={handleUpdateDoctorStatus}
+            onBackToApp={() => setScreen('scan')}
+          />
+        )}
+      </main>
 
-        {/* AI Assistant Chatbot */}
-        <AiChatbot
-          currentLocation={currentLocation}
-          onSelectDestination={handleAiDestinationSelect}
-        />
-      </div>
+      {/* AI Assistant Chatbot */}
+      <AiChatbot
+        currentLocation={currentLocation}
+        onSelectDestination={handleAiDestinationSelect}
+      />
+    </div>
   );
 }

@@ -6,6 +6,7 @@ export const HOSPITAL_INFO = {
   mapsLink: "https://maps.google.com/?q=Manipal+Hospital+HAL+Old+Airport+Road+Bengaluru",
   osmLink: "https://www.openstreetmap.org/search?query=Manipal%20Hospital%20Old%20Airport%20Road%20Bengaluru",
   helpline: "1800 102 5555 / (080) 2502 4444",
+  productionUrl: "https://arogya-nav.vercel.app", // Live production domain for wall QR codes
 };
 
 export const HOSPITAL_LOCATIONS = {
@@ -15,6 +16,21 @@ export const HOSPITAL_LOCATIONS = {
   "LOC-C2": { id: "LOC-C2", name: "OPD Consultation Corridor", floor: "1st Floor", wing: "Wing C" },
   "LOC-D3": { id: "LOC-D3", name: "Cath Lab & ICU Lobby", floor: "2nd Floor", wing: "Wing D" },
 };
+
+export const INITIAL_DOCTORS = [
+  { id: "DOC-001", name: "Dr. Rajesh Sharma", spec: "Senior Cardiologist", deptId: "DEPT-005", status: "available" },
+  { id: "DOC-002", name: "Dr. Priya Sundaram", spec: "Interventional Cardiology", deptId: "DEPT-005", status: "in_surgery" },
+  { id: "DOC-003", name: "Dr. Ramesh Kumar", spec: "Emergency Specialist", deptId: "DEPT-001", status: "available" },
+  { id: "DOC-004", name: "Dr. Sunita Patil", spec: "General Physician (OPD)", deptId: "DEPT-002", status: "available" },
+  { id: "DOC-005", name: "Dr. Anand Kulkarni", spec: "Senior Consultant (OPD)", deptId: "DEPT-002", status: "on_leave" },
+  { id: "DOC-006", name: "Dr. Vikram Rao", spec: "Orthopaedic Surgeon", deptId: "DEPT-006", status: "available" },
+  { id: "DOC-007", name: "Dr. Anita Deshmukh", spec: "Senior Paediatrician", deptId: "DEPT-008", status: "available" },
+  { id: "DOC-008", name: "Dr. Suresh Reddy", spec: "Neurologist & Stroke Specialist", deptId: "DEPT-009", status: "in_surgery" },
+  { id: "DOC-009", name: "Dr. Meera Nambiar", spec: "Radiologist", deptId: "DEPT-003", status: "available" },
+  { id: "DOC-010", name: "Dr. Deepak Mehta", spec: "Robotic Surgeon", deptId: "DEPT-010", status: "available" },
+  { id: "DOC-011", name: "Dr. Kavita Verma", spec: "Chief Physiotherapist", deptId: "DEPT-011", status: "available" },
+  { id: "DOC-012", name: "Dr. Aris Ali", spec: "Pathologist", deptId: "DEPT-004", status: "available" },
+];
 
 export const DEPARTMENTS = [
   { id: "DEPT-001", name: "Emergency & Trauma", shortName: "Emergency", floor: "Ground Floor", wing: "Block B", icon: "🚨", color: "#fde8ee", description: "24/7 emergency critical care" },

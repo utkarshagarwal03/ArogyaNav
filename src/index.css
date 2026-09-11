@@ -356,3 +356,59 @@ html, body { height: 100%; font-family: var(--font); background: var(--color-bg)
   40% { transform: scale(1); opacity: 1; }
 }
 
+/* ─── Admin Portal & Printable Wall Posters Styles ─────────────────── */
+.admin-tab-btn {
+  flex: 1; border: none; background: transparent; padding: 10px 12px;
+  border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 700;
+  color: var(--color-text-muted); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 6px; transition: all 0.2s;
+}
+.admin-tab-btn.active {
+  background: #ffffff; color: var(--color-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.printable-qr-grid {
+  display: grid; grid-template-columns: 1fr; gap: 16px;
+}
+@media (min-width: 480px) {
+  .printable-qr-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.qr-poster-card {
+  background: #ffffff; border: 2px solid #e2e8f0; border-radius: 16px;
+  padding: 20px; display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  position: relative; overflow: hidden; page-break-inside: avoid;
+}
+
+.qr-poster-header { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.poster-hospital { font-size: 0.72rem; font-weight: 800; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.08em; }
+.poster-title { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 2px 0 0; }
+.poster-meta { font-size: 0.78rem; color: #64748b; margin: 0; font-weight: 600; }
+
+.qr-image-wrapper {
+  background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px;
+  padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%;
+}
+.qr-code-img { width: 180px; height: 180px; display: block; border-radius: 8px; }
+.qr-loc-code { font-family: monospace; font-size: 0.8rem; font-weight: 700; color: #0f172a; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; }
+
+.qr-poster-footer { background: #f1f5f9; border-radius: 8px; padding: 8px 12px; width: 100%; }
+
+/* 🖨️ Print Styles */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .app-shell { max-width: 100% !important; margin: 0 !important; box-shadow: none !important; border-radius: 0 !important; }
+  .app-header, .step-bar, .ai-launcher-btn, .ai-chat-backdrop, .no-print, .admin-tabs-nav, .admin-container > div:first-child, .admin-container > div:nth-child(3) > div:first-child {
+    display: none !important;
+  }
+  .printable-qr-grid {
+    grid-template-columns: 1fr 1fr !important; gap: 20px !important; width: 100% !important;
+  }
+  .qr-poster-card {
+    border: 3px solid #000 !important; box-shadow: none !important; page-break-inside: avoid !important; margin-bottom: 20px;
+  }
+  .qr-code-img { width: 220px !important; height: 220px !important; }
+}
+
+

@@ -114,9 +114,6 @@ export default function QrScannerView({ onLocationScanned }) {
     handleScan('LOC-A1');
   }
 
-  const [showQrModal, setShowQrModal] = useState(false);
-  const networkHost = window.location.hostname === 'localhost' ? '10.183.1.42' : window.location.hostname;
-  const baseUrl = `${window.location.protocol}//${networkHost}:5173`;
   const showPlaceholder = !!cameraError;
 
   return (
@@ -193,135 +190,23 @@ export default function QrScannerView({ onLocationScanned }) {
         </div>
       )}
 
-      {/* Info tip + External Scanner Notice + Action buttons */}
+      {/* Info tip + Demo button */}
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div className="scan-feedback info" style={{ fontSize: '0.82rem', padding: '12px 14px', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Info size={18} style={{ flexShrink: 0 }} />
-            <strong style={{ fontSize: '0.85rem' }}>External Camera / Google Lens Support</strong>
-          </div>
-          <span style={{ opacity: 0.9 }}>
-            Scan hospital wall tags using <b>Google Lens</b> or your phone camera to jump straight into navigation over Wi-Fi!
-          </span>
+        <div className="scan-feedback info" style={{ fontSize: '0.82rem', padding: '12px 14px' }}>
+          <Info size={18} style={{ flexShrink: 0 }} />
+          <span>Scan any wall QR tag in the hospital corridors, lifts, or entrance to detect your position.</span>
         </div>
 
         <button
-          className="btn btn-secondary"
-          onClick={() => setShowQrModal(true)}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', fontWeight: 600 }}
+          className="btn btn-primary pulse"
+          onClick={handleDemoScan}
+          id="demo-scan-btn"
+          aria-label="Simulate a QR code scan for demonstration"
         >
-          <QrCode size={18} />
-          📷 Show Google Lens Test QR Tags
+          <Camera size={20} />
+          Demo: Scan Main Entrance
         </button>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            className="btn btn-primary pulse"
-            onClick={handleDemoScan}
-            id="demo-scan-btn"
-            style={{ flex: 1 }}
-            aria-label="Simulate a QR code scan for demonstration"
-          >
-            <Camera size={18} />
-            Demo Scan
-          </button>
-          
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              window.location.search = '?from=LOC-A1&to=DEPT-001';
-            }}
-            style={{ flex: 1, fontSize: '0.8rem', padding: '8px 12px' }}
-            title="Test scanning a QR code that directly targets Emergency Dept"
-          >
-            🚀 Test Direct Link
-          </button>
-        </div>
       </div>
-
-      {/* Google Lens Printable QR Codes Modal */}
-      {showQrModal && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
-        }}>
-          <div style={{
-            background: 'white', color: '#1e293b', borderRadius: 16,
-            maxWidth: 480, width: '100%', maxHeight: '85vh', overflowY: 'auto',
-            padding: 24, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
-            display: 'flex', flexDirection: 'column', gap: 16
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', pb: 12 }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>📱 Google Lens Wall QR Tags</h3>
-              <button
-                onClick={() => setShowQrModal(false)}
-                style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontWeight: 'bold' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
-              Ensure your phone is on the same Wi-Fi as your computer. Scan any tag with <b>Google Lens</b> or your camera app!
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {/* Tag 1 */}
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, textAlign: 'center', background: '#f8fafc' }}>
-                <strong style={{ fontSize: '0.85rem', color: '#0284c7' }}>Main Entrance (LOC-A1)</strong>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/?loc=LOC-A1`)}`}
-                  alt="Main Entrance QR"
-                  style={{ width: '100%', height: 'auto', marginTop: 8, borderRadius: 6 }}
-                />
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>Select Dept Screen</span>
-              </div>
-
-              {/* Tag 2 */}
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, textAlign: 'center', background: '#f8fafc' }}>
-                <strong style={{ fontSize: '0.85rem', color: '#0284c7' }}>Reception (LOC-A2)</strong>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/?loc=LOC-A2`)}`}
-                  alt="Reception QR"
-                  style={{ width: '100%', height: 'auto', marginTop: 8, borderRadius: 6 }}
-                />
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>Ground Floor Lobby</span>
-              </div>
-
-              {/* Tag 3 */}
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, textAlign: 'center', background: '#f8fafc' }}>
-                <strong style={{ fontSize: '0.85rem', color: '#0284c7' }}>OPD Corridor (LOC-C2)</strong>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/?loc=LOC-C2`)}`}
-                  alt="OPD QR"
-                  style={{ width: '100%', height: 'auto', marginTop: 8, borderRadius: 6 }}
-                />
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>1st Floor Corridor</span>
-              </div>
-
-              {/* Tag 4 */}
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, textAlign: 'center', background: '#dc2626' }}>
-                <strong style={{ fontSize: '0.85rem', color: '#dc2626' }}>Direct Emergency</strong>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/?from=LOC-A1&to=DEPT-001`)}`}
-                  alt="Direct Emergency QR"
-                  style={{ width: '100%', height: 'auto', marginTop: 8, borderRadius: 6 }}
-                />
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', marginTop: 4 }}>Direct Navigation!</span>
-              </div>
-            </div>
-
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowQrModal(false)}
-              style={{ marginTop: 8 }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
