@@ -1,0 +1,94 @@
+# ArogyaNav — Smart Indoor Hospital Navigation
+
+> 🏥 **Running at:** http://localhost:5173
+
+## Tech Stack
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Vite | 8.x | Build tool & dev server |
+| React | 19 | UI framework |
+| html5-qrcode | latest | Camera + QR decoding |
+| lucide-react | latest | Icon set |
+| Vanilla CSS | — | Design system |
+
+---
+
+## Project Structure
+
+```
+src/
+├── index.css               # Full design system (tokens, components, animations)
+├── main.jsx                # App entry point
+├── App.jsx                 # Root: step bar + screen routing
+├── components/
+│   ├── QrScannerView.jsx   # Screen 1 — Camera scanner
+│   ├── DestinationView.jsx # Screen 2 — Department search & select
+│   └── NavigationView.jsx  # Screen 3 — Step-by-step directions
+└── data/
+    └── hospitalData.js     # Location map, department list, route generator
+```
+
+---
+
+## Screens
+
+### Screen 1 — QR Scanner
+- Opens device camera via `html5-qrcode`
+- Scans and validates location IDs against `HOSPITAL_LOCATIONS` map
+- Graceful fallback if camera is unavailable (demo button always works)
+- Animated scan-line overlay with corner brackets
+
+### Screen 2 — Destination Selection
+- Shows current scanned location badge
+- Live search filter across all 12 departments
+- Scrollable department cards with icon, description, floor, and wing
+- Accessible: keyboard navigable, ARIA roles
+
+### Screen 3 — Navigation
+- Destination header card (gradient blue)
+- Meta chips: total distance + estimated walk time + current step
+- **Directional arrow card** — large arrow (↑ ↗ ↙) with colour-coded background
+- Prev / Next step buttons
+- Collapsible "All Steps" list with click-to-jump
+- "Scan Again" button to reset the entire flow
+
+---
+
+## Screenshots
+
+````carousel
+![QR Scanner View](C:\Users\utkar\.gemini\antigravity\brain\02c68ab5-0df0-4ab0-98c4-7e9577530bd8\.system_generated\click_feedback\click_feedback_1778523236950.png)
+<!-- slide -->
+![Destination Selection View](C:\Users\utkar\.gemini\antigravity\brain\02c68ab5-0df0-4ab0-98c4-7e9577530bd8\.system_generated\click_feedback\click_feedback_1778523249431.png)
+<!-- slide -->
+![Navigation View](C:\Users\utkar\.gemini\antigravity\brain\02c68ab5-0df0-4ab0-98c4-7e9577530bd8\.system_generated\click_feedback\click_feedback_1778523263923.png)
+````
+
+---
+
+## Design System Tokens (index.css)
+
+| Token | Value |
+|-------|-------|
+| `--color-primary` | `#0077B6` (medical blue) |
+| `--color-secondary` | `#00B4D8` |
+| `--color-accent` | `#06D6A0` (green for success) |
+| `--color-danger` | `#EF476F` |
+| Font | Inter (Google Fonts) |
+| Border radius | 8 / 16 / 24px scale |
+
+---
+
+## Extending for Production
+
+> [!IMPORTANT]
+> The current route data is **fully simulated**. For production:
+
+1. **QR Codes** — Generate QR codes encoding location IDs (e.g., `LOC-A1`) and print them at each junction.
+2. **Backend API** — Replace `generateRoute()` in `hospitalData.js` with a real API call to a graph-based pathfinding service (e.g., Dijkstra on a hospital floor graph).
+3. **Floor Maps** — Add an SVG/canvas floor map overlay in `NavigationView` with a moving dot.
+4. **PWA** — Add `vite-plugin-pwa` to make it installable on patients' phones.
+5. **Accessibility** — Add voice readout via Web Speech API (`speechSynthesis.speak()`).
+
+> [!TIP]
+> The `HOSPITAL_LOCATIONS` and `DEPARTMENTS` objects in `hospitalData.js` are the only two places you need to update to match your real hospital layout.
