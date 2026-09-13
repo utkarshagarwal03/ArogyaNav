@@ -421,3 +421,4 @@ export default function BuildingMap({ currentLocation, destination, onSelectRoom
     </div>
   );
 }
+

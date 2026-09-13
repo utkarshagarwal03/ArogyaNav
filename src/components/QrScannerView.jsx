@@ -31,9 +31,15 @@ export default function QrScannerView({ onLocationScanned }) {
         const scanner = new Html5Qrcode('arogyanav-qr-reader');
         scannerRef.current = scanner;
 
+        const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const boxSize = Math.max(150, Math.floor(minEdge * 0.7));
+          return { width: boxSize, height: boxSize };
+        };
+
         scanner.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
+          { fps: 10, qrbox: qrboxFunction },
           (decodedText) => {
             if (!scannedRef.current) handleScan(decodedText);
           },
