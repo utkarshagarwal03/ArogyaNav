@@ -12,7 +12,7 @@ export default function AiChatbot({ onSelectDestination, currentLocation, doctor
       sender: 'bot',
       text: "Hello! I am **Navi AI**, your smart hospital assistant for **Manipal Hospital**. 🏥\n\nYou can ask about symptoms, find departments, or check if specific doctors (e.g. *Dr. Rajesh Sharma*) are available today!",
       suggestions: ["Is Dr. Rajesh Sharma available?", "I am vomiting / stomach pain", "Where is Pharmacy?", "Visiting hours"],
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
 
@@ -32,7 +32,7 @@ export default function AiChatbot({ onSelectDestination, currentLocation, doctor
       id: Date.now(),
       sender: 'user',
       text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     };
 
     setMessages(prev => [...prev, userMsg]);
@@ -47,7 +47,7 @@ export default function AiChatbot({ onSelectDestination, currentLocation, doctor
         text: response.text,
         targetDepartment: response.targetDepartment,
         suggestions: response.suggestions,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
       setIsTyping(false);

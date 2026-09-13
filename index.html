@@ -12,7 +12,18 @@
     <title>ArogyaNav – Smart Hospital Navigation</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0077B6; color: #ffffff; font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 20px;">
+        <div style="font-size: 48px; margin-bottom: 16px; animation: pulse 1.5s infinite ease-in-out;">🏥</div>
+        <h1 style="font-size: 24px; font-weight: 800; margin: 0 0 8px 0;">ArogyaNav</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">Smart Indoor Hospital Navigation</p>
+        <div style="margin-top: 24px; width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #ffffff; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        <style>
+          @keyframes spin { to { transform: rotate(360deg); } }
+          @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        </style>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
