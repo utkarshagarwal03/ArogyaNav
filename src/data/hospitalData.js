@@ -104,7 +104,16 @@ export const INITIAL_DOCTORS = [
 ];
 
 export function generateRoute(fromLocation, toDept) {
-  // Pre-configured specific routes for popular checkpoints
+  // ── 1. Try graph-based Dijkstra route (from Admin-built map) ────────────
+  try {
+    const { generateRouteFromGraph } = _getGraphStore();
+    if (generateRouteFromGraph) {
+      const graphRoute = generateRouteFromGraph(fromLocation, toDept);
+      if (graphRoute) return graphRoute;
+    }
+  } catch (_) { /* fallthrough to hardcoded */ }
+
+  // ── 2. Pre-configured specific routes for popular checkpoints ────────────
   const routes = {
     "LOC-A1": {
       "DEPT-001": {
@@ -154,7 +163,7 @@ export function generateRoute(fromLocation, toDept) {
   const locRoutes = routes[fromLocation?.id];
   if (locRoutes && locRoutes[toDept?.id]) return locRoutes[toDept.id];
 
-  // Robust dynamic route generator for all 25+ checkpoints & departments across 6 floors
+  // ── 3. Dynamic fallback for unmapped routes ──────────────────────────────
   const floorDiff = toDept.floor !== fromLocation?.floor;
   return {
     steps: [
@@ -168,4 +177,17 @@ export function generateRoute(fromLocation, toDept) {
     totalDistance: floorDiff ? "~120m" : "~60m",
     estimatedTime: floorDiff ? "4-5 min" : "2-3 min",
   };
+}
+
+// Lazy singleton loader for mapGraphStore (avoids circular deps in ESM)
+let _graphStore = null;
+function _getGraphStore() {
+  if (_graphStore) return _graphStore;
+  // Dynamic import isn't synchronous; we cache on first successful call from
+  // NavigationView which pre-imports it.
+  return _graphStore || {};
+}
+// Called once by the app bootstrap so generateRoute can use Dijkstra synchronously.
+export function injectGraphStore(store) {
+  _graphStore = store;
 }
