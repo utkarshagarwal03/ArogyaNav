@@ -8,12 +8,12 @@ import { getFirestore } from "firebase/firestore";
 // =========================================================================
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBfQ76MAPVvWPwUxQk0uyVBSYjU21tE-6s",
-  authDomain: "arogyanav-db.firebaseapp.com",
-  projectId: "arogyanav-db",
-  storageBucket: "arogyanav-db.firebasestorage.app",
-  messagingSenderId: "2374170774",
-  appId: "1:2374170774:web:38d2daa36bbd52af056ab7"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // =========================================================================
