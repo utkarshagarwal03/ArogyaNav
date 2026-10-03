@@ -1,6 +1,10 @@
 import { useRef, useEffect, useState } from 'react';
-import { HOSPITAL_LOCATIONS } from '../data/hospitalData';
+import { HOSPITAL_LOCATIONS, H2_LOCATIONS } from '../data/hospitalData';
 import { Camera, CheckCircle, AlertCircle, Info, QrCode } from 'lucide-react';
+
+// Unified lookup across all hospitals
+const ALL_LOCATIONS = { ...HOSPITAL_LOCATIONS, ...H2_LOCATIONS };
+
 
 export default function QrScannerView({ onLocationScanned }) {
   const [feedback, setFeedback]       = useState(null);
@@ -99,7 +103,7 @@ export default function QrScannerView({ onLocationScanned }) {
       }
     }
 
-    const location = HOSPITAL_LOCATIONS[locId];
+    const location = ALL_LOCATIONS[locId];
     if (location) {
       setFeedback({ type: 'success', message: `📍 Detected: ${location.name}` });
       // Wait briefly so user can see the success state, then navigate
@@ -196,22 +200,34 @@ export default function QrScannerView({ onLocationScanned }) {
         </div>
       )}
 
-      {/* Info tip + Demo button */}
+      {/* Info tip + Demo buttons */}
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div className="scan-feedback info" style={{ fontSize: '0.82rem', padding: '12px 14px' }}>
           <Info size={18} style={{ flexShrink: 0 }} />
           <span>Scan any wall QR tag in the hospital corridors, lifts, or entrance to detect your position.</span>
         </div>
 
-        <button
-          className="btn btn-primary pulse"
-          onClick={handleDemoScan}
-          id="demo-scan-btn"
-          aria-label="Simulate a QR code scan for demonstration"
-        >
-          <Camera size={20} />
-          Demo: Scan Main Entrance
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn btn-primary pulse"
+            onClick={handleDemoScan}
+            id="demo-scan-btn"
+            style={{ flex: 1, fontSize: '0.82rem' }}
+            aria-label="Simulate a Manipal Hospital QR code scan"
+          >
+            <Camera size={18} />
+            Demo: Manipal Hospital
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => { if (!scannedRef.current) handleScan('H2-LOC-A1'); }}
+            style={{ flex: 1, fontSize: '0.82rem', background: '#059173' }}
+            aria-label="Simulate an Apollo Hospital QR code scan"
+          >
+            <Camera size={18} />
+            Demo: Apollo Hospital
+          </button>
+        </div>
       </div>
     </div>
   );

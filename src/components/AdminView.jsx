@@ -1,7 +1,7 @@
 import { useState, lazy, Suspense } from 'react';
-import { HOSPITAL_LOCATIONS, HOSPITAL_INFO, DEPARTMENTS } from '../data/hospitalData';
+import { HOSPITAL_LOCATIONS, HOSPITAL_INFO, HOSPITALS } from '../data/hospitalData';
 import {
-  QrCode, Printer, Download, UserCheck, ShieldAlert, ArrowLeft,
+  QrCode, Printer, Download, UserCheck, ArrowLeft,
   CheckCircle2, Clock, XCircle, Search, Sparkles, Map, Crown, Building2,
 } from 'lucide-react';
 
@@ -16,7 +16,7 @@ const ROLE_CONFIG = {
     color: '#0f172a',
     bg: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
     badge: '#fff',
-    desc: 'Full platform access',
+    desc: 'Full platform access — all hospitals',
     defaultTab: 'qr',
   },
   hospital: {
@@ -28,6 +28,12 @@ const ROLE_CONFIG = {
     desc: 'Doctor & department management',
     defaultTab: 'doctors',
   },
+};
+
+// Hospital accent colours
+const HOSPITAL_ACCENTS = {
+  H1: { color: '#0077B6', bg: 'linear-gradient(135deg, #0077B6, #00B4D8)', light: '#eff8ff', border: '#93c5fd' },
+  H2: { color: '#059173', bg: 'linear-gradient(135deg, #059173, #06d6a0)', light: '#ecfdf5', border: '#6ee7b7' },
 };
 
 // ── Status badge helper ────────────────────────────────────────────────────────
@@ -44,29 +50,142 @@ function getStatusBadge(status) {
   }
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
-export default function AdminView({ adminRole = 'super', doctors, onUpdateDoctorStatus, onBackToApp }) {
-  const cfg = ROLE_CONFIG[adminRole] || ROLE_CONFIG.super;
-
-  // Tabs available per role
-  const isSuperAdmin    = adminRole === 'super';
-  const isHospitalAdmin = adminRole === 'hospital';
-
-  const [activeTab, setActiveTab]     = useState(cfg.defaultTab);
-  const [mapEditorOpen, setMapEditorOpen] = useState(false);
-  const [baseUrl, setBaseUrl]         = useState(HOSPITAL_INFO.productionUrl || window.location.origin);
-  const [searchDoc, setSearchDoc]     = useState('');
+// ── Doctor Attendance Panel ────────────────────────────────────────────────────
+function DoctorPanel({ doctors, departments, hospitalId, onUpdateDoctorStatus }) {
+  const [searchDoc, setSearchDoc]       = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
 
-  const RoleIcon = cfg.icon;
-
-  // Filter doctors
   const filteredDoctors = doctors.filter(doc => {
     const matchSearch = doc.name.toLowerCase().includes(searchDoc.toLowerCase()) ||
                         doc.spec.toLowerCase().includes(searchDoc.toLowerCase());
     const matchDept   = selectedDept === 'ALL' || doc.deptId === selectedDept;
     return matchSearch && matchDept;
   });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Search & Filter */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--color-text-muted)' }} />
+          <input
+            type="search"
+            className="search-bar"
+            style={{ paddingLeft: 38, fontSize: '0.88rem', padding: '10px 10px 10px 38px' }}
+            placeholder="Search doctor or specialty..."
+            value={searchDoc}
+            onChange={e => setSearchDoc(e.target.value)}
+          />
+        </div>
+        <select
+          value={selectedDept}
+          onChange={e => setSelectedDept(e.target.value)}
+          style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--color-border)', background: '#fff', fontSize: '0.85rem', fontWeight: 600 }}
+        >
+          <option value="ALL">All Departments ({departments.length})</option>
+          {departments.map(d => <option key={d.id} value={d.id}>{d.shortName}</option>)}
+        </select>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {[
+          { label: 'Available',        count: doctors.filter(d => d.status === 'available').length,   color: '#06D6A0', bg: '#e6faf5' },
+          { label: 'In OPD / Surgery', count: doctors.filter(d => d.status === 'in_surgery').length,  color: '#f59e0b', bg: '#fef3c7' },
+          { label: 'On Leave',         count: doctors.filter(d => d.status === 'on_leave').length,    color: '#ef476f', bg: '#fde8ee' },
+        ].map(s => (
+          <div key={s.label} style={{ flex: 1, minWidth: 100, background: s.bg, border: `1px solid ${s.color}33`, borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: s.color }}>{s.count}</div>
+            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Doctor cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {filteredDoctors.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 32, color: '#94a3b8', fontSize: '0.88rem' }}>
+            No doctors match your search.
+          </div>
+        )}
+        {filteredDoctors.map(doc => {
+          const dept      = departments.find(d => d.id === doc.deptId);
+          const statusCfg = getStatusBadge(doc.status);
+          return (
+            <div key={doc.id} className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#0f172a' }}>{doc.name}</h4>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                    {doc.spec} &middot; <strong style={{ color: 'var(--color-primary)' }}>{dept?.shortName}</strong>
+                  </p>
+                </div>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '4px 10px', borderRadius: 999,
+                  background: statusCfg.bg, color: statusCfg.color,
+                  fontSize: '0.75rem', fontWeight: 700,
+                }}>
+                  {statusCfg.icon} {statusCfg.label}
+                </span>
+              </div>
+
+              {/* Status toggle buttons */}
+              <div style={{ display: 'flex', gap: 6, borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
+                <button
+                  className={`btn btn-sm ${doc.status === 'available' ? 'btn-accent' : 'btn-ghost'}`}
+                  style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                  onClick={() => onUpdateDoctorStatus(doc.id, 'available', hospitalId)}
+                >
+                  <CheckCircle2 size={13} /> Available
+                </button>
+                <button
+                  className={`btn btn-sm ${doc.status === 'in_surgery' ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                  onClick={() => onUpdateDoctorStatus(doc.id, 'in_surgery', hospitalId)}
+                >
+                  <Clock size={13} /> In OPD / Surgery
+                </button>
+                <button
+                  className={`btn btn-sm ${doc.status === 'on_leave' ? 'btn-danger' : 'btn-ghost'}`}
+                  style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                  onClick={() => onUpdateDoctorStatus(doc.id, 'on_leave', hospitalId)}
+                >
+                  <XCircle size={13} /> On Leave
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
+export default function AdminView({ adminRole = 'super', adminHospitalId, doctors, h2Doctors, onUpdateDoctorStatus, onBackToApp }) {
+  const cfg = ROLE_CONFIG[adminRole] || ROLE_CONFIG.super;
+
+  const isSuperAdmin    = adminRole === 'super';
+  const isHospitalAdmin = adminRole === 'hospital';
+
+  // Super Admin can switch between hospitals; Hospital Admins are locked to their hospital
+  const [activeSuperHospital, setActiveSuperHospital] = useState('H1');
+  const viewingHospitalId = isSuperAdmin ? activeSuperHospital : adminHospitalId;
+
+  const [activeTab, setActiveTab]         = useState(cfg.defaultTab);
+  const [mapEditorOpen, setMapEditorOpen] = useState(false);
+  const [baseUrl, setBaseUrl]             = useState(HOSPITAL_INFO.productionUrl || window.location.origin);
+
+  const RoleIcon = cfg.icon;
+
+  // Get the data for the currently-viewed hospital
+  const hospitalData    = HOSPITALS[viewingHospitalId] || HOSPITALS.H1;
+  const hospitalInfo    = hospitalData.info;
+  const hospitalDepts   = hospitalData.departments || [];
+  const hospitalDoctors = viewingHospitalId === 'H1' ? doctors : h2Doctors;
+  const hospitalLocs    = viewingHospitalId === 'H1' ? HOSPITAL_LOCATIONS : (hospitalData.locations || {});
+  const accent          = HOSPITAL_ACCENTS[viewingHospitalId] || HOSPITAL_ACCENTS.H1;
 
   return (
     <div className="view bottom-safe admin-container">
@@ -90,13 +209,13 @@ export default function AdminView({ adminRole = 'super', doctors, onUpdateDoctor
               </h2>
               <span style={{
                 fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                background: isSuperAdmin ? '#0f172a' : '#0077B6', color: '#fff', letterSpacing: '0.04em',
+                background: isSuperAdmin ? '#0f172a' : accent.color, color: '#fff', letterSpacing: '0.04em',
               }}>
-                {isSuperAdmin ? 'SUPER' : 'HOSPITAL'}
+                {isSuperAdmin ? 'SUPER' : hospitalInfo.name.split(' ')[0].toUpperCase()}
               </span>
             </div>
             <p style={{ fontSize: '0.75rem', margin: 0, color: 'var(--color-text-muted)', fontWeight: 500 }}>
-              {HOSPITAL_INFO.name} &mdash; {cfg.desc}
+              {isSuperAdmin ? 'All Hospitals' : `${hospitalInfo.name} — ${hospitalInfo.campus}`} &mdash; {cfg.desc}
             </p>
           </div>
         </div>
@@ -109,6 +228,38 @@ export default function AdminView({ adminRole = 'super', doctors, onUpdateDoctor
           <ArrowLeft size={16} /> Logout
         </button>
       </div>
+
+      {/* ── Super Admin: Hospital Switcher ─────────────────────────────────── */}
+      {isSuperAdmin && (
+        <div style={{ display: 'flex', gap: 8, padding: '10px 0 4px' }}>
+          {Object.values(HOSPITALS).map(h => {
+            const hid = h.info.id;
+            const acc = HOSPITAL_ACCENTS[hid];
+            const active = activeSuperHospital === hid;
+            return (
+              <button
+                key={hid}
+                type="button"
+                onClick={() => setActiveSuperHospital(hid)}
+                style={{
+                  flex: 1, padding: '10px 12px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                  border: active ? `2px solid ${acc.color}` : '2px solid #e2e8f0',
+                  background: active ? acc.light : '#f8fafc',
+                  color: active ? acc.color : '#64748b',
+                  transition: 'all 0.15s',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                }}
+              >
+                <span style={{ fontSize: '1.2rem' }}>🏥</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>{h.info.name}</div>
+                  <div style={{ fontSize: '0.68rem', opacity: 0.8 }}>{h.info.campus}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Tab Navigation ────────────────────────────────────────────────── */}
       <div style={{
@@ -148,14 +299,14 @@ export default function AdminView({ adminRole = 'super', doctors, onUpdateDoctor
       {/* ── Hospital Admin welcome banner ─────────────────────────────────── */}
       {isHospitalAdmin && (
         <div style={{
-          background: 'linear-gradient(135deg, #eff8ff, #dbeafe)',
-          border: '1px solid #93c5fd', borderRadius: 10,
-          padding: '10px 14px', fontSize: '0.8rem', color: '#1e40af', fontWeight: 600,
+          background: accent.light,
+          border: `1px solid ${accent.border}`, borderRadius: 10,
+          padding: '10px 14px', fontSize: '0.8rem', color: accent.color, fontWeight: 600,
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <Building2 size={15} color="#2563eb" />
+          <Building2 size={15} color={accent.color} />
           <span>
-            You are logged in as <strong>Hospital Admin</strong>. You can manage doctor availability and attendance.
+            You are logged in as <strong>Hospital Admin</strong> for <strong>{hospitalInfo.name}</strong> ({hospitalInfo.campus}).
             Contact <strong>Super Admin</strong> to update the hospital map or QR codes.
           </span>
         </div>
@@ -171,7 +322,7 @@ export default function AdminView({ adminRole = 'super', doctors, onUpdateDoctor
           <div className="card" style={{ background: '#f8fafc', border: '1px solid #cbd5e1', padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Sparkles size={16} color="var(--color-primary)" />
-              Target Website for Wall QR Codes
+              Target Website for Wall QR Codes — {hospitalInfo.name}
             </label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
@@ -196,13 +347,13 @@ export default function AdminView({ adminRole = 'super', doctors, onUpdateDoctor
 
           {/* QR Grid */}
           <div className="printable-qr-grid" id="printable-area">
-            {Object.values(HOSPITAL_LOCATIONS).map(loc => {
+            {Object.values(hospitalLocs).map(loc => {
               const targetUrl  = `${baseUrl.replace(/\/$/, '')}/?loc=${loc.id}`;
               const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(targetUrl)}`;
               return (
                 <div key={loc.id} className="qr-poster-card">
                   <div className="qr-poster-header">
-                    <span className="poster-hospital">{HOSPITAL_INFO.name}</span>
+                    <span className="poster-hospital">{hospitalInfo.name}</span>
                     <h3 className="poster-title">{loc.name}</h3>
                     <p className="poster-meta">{loc.floor} &middot; {loc.wing}</p>
                   </div>
@@ -236,101 +387,15 @@ export default function AdminView({ adminRole = 'super', doctors, onUpdateDoctor
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* TAB 2: DOCTOR ATTENDANCE (both roles) */}
+      {/* TAB 2: DOCTOR ATTENDANCE (both roles, scoped to hospital) */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'doctors' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-          {/* Search & Filter */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--color-text-muted)' }} />
-              <input
-                type="search"
-                className="search-bar"
-                style={{ paddingLeft: 38, fontSize: '0.88rem', padding: '10px 10px 10px 38px' }}
-                placeholder="Search doctor or specialty..."
-                value={searchDoc}
-                onChange={e => setSearchDoc(e.target.value)}
-              />
-            </div>
-            <select
-              value={selectedDept}
-              onChange={e => setSelectedDept(e.target.value)}
-              style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--color-border)', background: '#fff', fontSize: '0.85rem', fontWeight: 600 }}
-            >
-              <option value="ALL">All Departments ({DEPARTMENTS.length})</option>
-              {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.shortName}</option>)}
-            </select>
-          </div>
-
-          {/* Stats row */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Available',    count: doctors.filter(d => d.status === 'available').length,   color: '#06D6A0', bg: '#e6faf5' },
-              { label: 'In OPD / Surgery', count: doctors.filter(d => d.status === 'in_surgery').length, color: '#f59e0b', bg: '#fef3c7' },
-              { label: 'On Leave',     count: doctors.filter(d => d.status === 'on_leave').length,    color: '#ef476f', bg: '#fde8ee' },
-            ].map(s => (
-              <div key={s.label} style={{ flex: 1, minWidth: 100, background: s.bg, border: `1px solid ${s.color}33`, borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: s.color }}>{s.count}</div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', marginTop: 2 }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Doctor cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filteredDoctors.map(doc => {
-              const dept      = DEPARTMENTS.find(d => d.id === doc.deptId);
-              const statusCfg = getStatusBadge(doc.status);
-              return (
-                <div key={doc.id} className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#0f172a' }}>{doc.name}</h4>
-                      <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-                        {doc.spec} &middot; <strong style={{ color: 'var(--color-primary)' }}>{dept?.shortName}</strong>
-                      </p>
-                    </div>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      padding: '4px 10px', borderRadius: 999,
-                      background: statusCfg.bg, color: statusCfg.color,
-                      fontSize: '0.75rem', fontWeight: 700,
-                    }}>
-                      {statusCfg.icon} {statusCfg.label}
-                    </span>
-                  </div>
-
-                  {/* Status toggle buttons */}
-                  <div style={{ display: 'flex', gap: 6, borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
-                    <button
-                      className={`btn btn-sm ${doc.status === 'available' ? 'btn-accent' : 'btn-ghost'}`}
-                      style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                      onClick={() => onUpdateDoctorStatus(doc.id, 'available')}
-                    >
-                      <CheckCircle2 size={13} /> Available
-                    </button>
-                    <button
-                      className={`btn btn-sm ${doc.status === 'in_surgery' ? 'btn-primary' : 'btn-ghost'}`}
-                      style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                      onClick={() => onUpdateDoctorStatus(doc.id, 'in_surgery')}
-                    >
-                      <Clock size={13} /> In OPD / Surgery
-                    </button>
-                    <button
-                      className={`btn btn-sm ${doc.status === 'on_leave' ? 'btn-danger' : 'btn-ghost'}`}
-                      style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                      onClick={() => onUpdateDoctorStatus(doc.id, 'on_leave')}
-                    >
-                      <XCircle size={13} /> On Leave
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <DoctorPanel
+          doctors={hospitalDoctors}
+          departments={hospitalDepts}
+          hospitalId={viewingHospitalId}
+          onUpdateDoctorStatus={onUpdateDoctorStatus}
+        />
       )}
 
       {/* ═══ MAP EDITOR — Fullscreen overlay (Super Admin only) ══════════ */}
@@ -347,4 +412,3 @@ export default function AdminView({ adminRole = 'super', doctors, onUpdateDoctor
     </div>
   );
 }
-

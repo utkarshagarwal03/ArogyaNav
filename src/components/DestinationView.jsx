@@ -1,21 +1,30 @@
 import { useState, useMemo } from 'react';
-import { DEPARTMENTS } from '../data/hospitalData';
 import BuildingMap from './BuildingMap';
 import { Search, MapPin, ChevronRight, List, Map } from 'lucide-react';
 
-export default function DestinationView({ currentLocation, onDestinationSelected, doctors = [] }) {
+export default function DestinationView({ currentLocation, onDestinationSelected, departments = [], doctors = [] }) {
   const [query, setQuery] = useState('');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return DEPARTMENTS;
+    if (!query.trim()) return departments;
     const q = query.toLowerCase();
-    return DEPARTMENTS.filter(d =>
+
+    // Collect dept IDs where a doctor name matches the query
+    const deptIdsWithMatchingDoctor = new Set(
+      doctors
+        .filter(d => d.name.toLowerCase().includes(q) || d.spec.toLowerCase().includes(q))
+        .map(d => d.deptId)
+    );
+
+    return departments.filter(d =>
       d.name.toLowerCase().includes(q) ||
       d.description.toLowerCase().includes(q) ||
-      d.floor.toLowerCase().includes(q)
+      d.floor.toLowerCase().includes(q) ||
+      d.shortName.toLowerCase().includes(q) ||
+      deptIdsWithMatchingDoctor.has(d.id)
     );
-  }, [query]);
+  }, [query, departments, doctors]);
 
   // Compute doctor availability count per department
   function getDocBadge(deptId) {
@@ -60,7 +69,7 @@ export default function DestinationView({ currentLocation, onDestinationSelected
 
       <div>
         <h2 className="view-title">Where do you want to go?</h2>
-        <p className="view-subtitle">Search for a department or select from the 3-Floor interactive map below.</p>
+        <p className="view-subtitle">Search by department, doctor name, or specialty — or browse the map.</p>
       </div>
 
       {/* View Mode Switcher */}
@@ -103,52 +112,80 @@ export default function DestinationView({ currentLocation, onDestinationSelected
               id="destination-search"
               type="search"
               className="search-bar"
-              placeholder="e.g. Cardiology, Pharmacy, OPD…"
+              placeholder="Department, doctor name, or specialty…"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoComplete="off"
-              aria-label="Search departments"
+              aria-label="Search departments and doctors"
             />
           </div>
 
-      {/* Department List */}
-      <div className="dept-list" role="listbox" aria-label="Department list">
-        {filtered.length === 0 ? (
-          <div className="empty-state">
-            <span style={{ fontSize: '2rem' }}>🔍</span>
-            <p>No departments found for "<strong>{query}</strong>"</p>
+          {/* Department List */}
+          <div className="dept-list" role="listbox" aria-label="Department list">
+            {filtered.length === 0 ? (
+              <div className="empty-state">
+                <span style={{ fontSize: '2rem' }}>🔍</span>
+                <p>No results for "<strong>{query}</strong>"</p>
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 4 }}>
+                  Try a department name, doctor name, or specialty
+                </p>
+              </div>
+            ) : (
+              filtered.map(dept => {
+                const deptDoctors = doctors.filter(d => d.deptId === dept.id);
+                // Highlight matched doctor names when searching
+                const matchedDocs = query.trim()
+                  ? deptDoctors.filter(d =>
+                      d.name.toLowerCase().includes(query.toLowerCase()) ||
+                      d.spec.toLowerCase().includes(query.toLowerCase())
+                    )
+                  : deptDoctors;
+
+                return (
+                  <button
+                    key={dept.id}
+                    className="dept-card"
+                    role="option"
+                    id={`dept-${dept.id}`}
+                    aria-label={`Navigate to ${dept.name}, ${dept.floor}`}
+                    onClick={() => onDestinationSelected(dept)}
+                  >
+                    <div className="dept-icon" style={{ background: dept.color }}>
+                      {dept.icon}
+                    </div>
+                    <div className="dept-info">
+                      <h3>{dept.name}</h3>
+                      <p>{dept.description}</p>
+                      {/* Per-doctor status — show each doctor with their live status */}
+                      {deptDoctors.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, margin: '4px 0 2px' }}>
+                          {(matchedDocs.length > 0 ? matchedDocs : deptDoctors).map(doc => {
+                            const dotColor =
+                              doc.status === 'available'  ? '#06D6A0' :
+                              doc.status === 'in_surgery' ? '#f59e0b' : '#ef476f';
+                            const statusLabel =
+                              doc.status === 'available'  ? 'Available' :
+                              doc.status === 'in_surgery' ? 'In OPD/Surgery' : 'On Leave';
+                            return (
+                              <span key={doc.id} style={{ fontSize: '0.73rem', color: '#475569', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0, display: 'inline-block' }} />
+                                {doc.name}
+                                <span style={{ fontWeight: 500, color: dotColor, fontSize: '0.68rem' }}>· {statusLabel}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {getDocBadge(dept.id)}
+                    </div>
+                    <span className="dept-floor">{dept.floor}</span>
+                    <ChevronRight size={18} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                  </button>
+                );
+              })
+            )}
           </div>
-        ) : (
-          filtered.map(dept => (
-            <button
-              key={dept.id}
-              className="dept-card"
-              role="option"
-              id={`dept-${dept.id}`}
-              aria-label={`Navigate to ${dept.name}, ${dept.floor}`}
-              onClick={() => onDestinationSelected(dept)}
-            >
-              <div className="dept-icon" style={{ background: dept.color }}>
-                {dept.icon}
-              </div>
-              <div className="dept-info">
-                <h3>{dept.name}</h3>
-                <p>{dept.description}</p>
-                {/* Doctor Names List */}
-                {doctors.filter(d => d.deptId === dept.id).length > 0 && (
-                  <p style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 600, margin: '4px 0 2px' }}>
-                    👨‍⚕️ {doctors.filter(d => d.deptId === dept.id).map(d => d.name).join(', ')}
-                  </p>
-                )}
-                {getDocBadge(dept.id)}
-              </div>
-              <span className="dept-floor">{dept.floor}</span>
-              <ChevronRight size={18} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
-            </button>
-          ))
-        )}
-      </div>
-      </>
+        </>
       )}
     </div>
   );

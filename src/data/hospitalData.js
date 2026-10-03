@@ -1,11 +1,24 @@
-// Manipal Hospital, HAL Old Airport Road, Bengaluru — Super-Speciality Campus Layout
+// ── Hospital 1: Manipal Hospital, HAL Old Airport Road, Bengaluru ──────────────
 export const HOSPITAL_INFO = {
+  id: "H1",
   name: "Manipal Hospital",
   campus: "HAL Old Airport Road, Bengaluru",
   address: "98, HAL Old Airport Rd, Kodihalli, Bengaluru, Karnataka 560017",
   mapsLink: "https://maps.google.com/?q=Manipal+Hospital+HAL+Old+Airport+Road+Bengaluru",
   osmLink: "https://www.openstreetmap.org/search?query=Manipal%20Hospital%20Old%20Airport%20Road%20Bengaluru",
   helpline: "1800 102 5555 / (080) 2502 4444",
+  productionUrl: "https://arogya-nav.vercel.app",
+};
+
+// ── Hospital 2: Apollo Hospitals, Greams Road, Chennai ─────────────────────────
+export const HOSPITAL2_INFO = {
+  id: "H2",
+  name: "Apollo Hospitals",
+  campus: "Greams Road, Chennai",
+  address: "21, Greams Lane, Off Greams Rd, Thousand Lights, Chennai, Tamil Nadu 600006",
+  mapsLink: "https://maps.google.com/?q=Apollo+Hospitals+Greams+Road+Chennai",
+  osmLink: "https://www.openstreetmap.org/search?query=Apollo%20Hospitals%20Greams%20Road%20Chennai",
+  helpline: "1800 599 1066 / (044) 2829 3333",
   productionUrl: "https://arogya-nav.vercel.app",
 };
 
@@ -103,6 +116,97 @@ export const INITIAL_DOCTORS = [
   { id: "DOC-030", name: "Dr. Vivek Chawla", spec: "Vascular Surgeon", deptId: "DEPT-005", status: "on_leave" },
 ];
 
+// ══════════════════════════════════════════════════════════════════════════════
+// HOSPITAL 2: Apollo Hospitals, Greams Road, Chennai
+// ══════════════════════════════════════════════════════════════════════════════
+
+export const H2_LOCATIONS = {
+  "H2-LOC-A1": { id: "H2-LOC-A1", name: "Main Entrance & Registration Desk", floor: "Ground Floor", wing: "Block A" },
+  "H2-LOC-A2": { id: "H2-LOC-A2", name: "Emergency & Trauma Gate",          floor: "Ground Floor", wing: "Block A" },
+  "H2-LOC-A3": { id: "H2-LOC-A3", name: "Apollo Pharmacy (24/7)",           floor: "Ground Floor", wing: "Block A" },
+  "H2-LOC-A4": { id: "H2-LOC-A4", name: "Billing & Insurance Counter",      floor: "Ground Floor", wing: "Block A" },
+  "H2-LOC-B1": { id: "H2-LOC-B1", name: "Radiology & MRI Suite",            floor: "Ground Floor", wing: "Block B" },
+  "H2-LOC-B2": { id: "H2-LOC-B2", name: "Pathology & Lab Collection",       floor: "Ground Floor", wing: "Block B" },
+  "H2-LOC-B3": { id: "H2-LOC-B3", name: "Patient Cafeteria",                floor: "Ground Floor", wing: "Block B" },
+  "H2-LOC-C1": { id: "H2-LOC-C1", name: "OPD Wing C Registration",          floor: "1st Floor",    wing: "Wing C" },
+  "H2-LOC-C2": { id: "H2-LOC-C2", name: "Cardiology & Heart Centre",        floor: "1st Floor",    wing: "Wing C" },
+  "H2-LOC-C3": { id: "H2-LOC-C3", name: "Orthopaedics & Joint Clinic",      floor: "1st Floor",    wing: "Wing C" },
+  "H2-LOC-C4": { id: "H2-LOC-C4", name: "Neurology & Brain Sciences",       floor: "1st Floor",    wing: "Wing C" },
+  "H2-LOC-D1": { id: "H2-LOC-D1", name: "Paediatrics & NICU Lobby",         floor: "2nd Floor",    wing: "Wing D" },
+  "H2-LOC-D2": { id: "H2-LOC-D2", name: "Obstetrics & Maternity Suite",     floor: "2nd Floor",    wing: "Wing D" },
+  "H2-LOC-D3": { id: "H2-LOC-D3", name: "ICU & Critical Care Corridor",     floor: "2nd Floor",    wing: "Wing D" },
+  "H2-LOC-E1": { id: "H2-LOC-E1", name: "Surgical OT Complex",              floor: "3rd Floor",    wing: "Wing E" },
+  "H2-LOC-E2": { id: "H2-LOC-E2", name: "Oncology & Cancer Centre",         floor: "3rd Floor",    wing: "Wing E" },
+  "H2-LOC-E3": { id: "H2-LOC-E3", name: "Transplant & Organ Care Unit",     floor: "3rd Floor",    wing: "Wing E" },
+  "H2-LOC-F1": { id: "H2-LOC-F1", name: "Blood Bank & Plasma Centre",       floor: "Basement B1",  wing: "Basement" },
+  "H2-LOC-F2": { id: "H2-LOC-F2", name: "Visitor Parking Desk",             floor: "Basement B1",  wing: "Basement" },
+};
+
+export const H2_DEPARTMENTS = [
+  { id: "H2-DEPT-001", name: "Emergency & Trauma Center",    shortName: "Emergency",    floor: "Ground Floor", wing: "Block A", icon: "🚨", color: "#fde8ee", description: "24/7 emergency & ambulance services" },
+  { id: "H2-DEPT-002", name: "Outpatient Department (OPD)",  shortName: "OPD",          floor: "1st Floor",    wing: "Wing C",  icon: "🩺", color: "#EAF2FB", description: "Specialist consultations & follow-ups" },
+  { id: "H2-DEPT-003", name: "Radiology & MRI Suite",        shortName: "Radiology",    floor: "Ground Floor", wing: "Block B", icon: "🩻", color: "#e6faf5", description: "MRI, CT Scan, X-Ray & Ultrasound" },
+  { id: "H2-DEPT-004", name: "Pathology & Diagnostics Lab",  shortName: "Lab",          floor: "Ground Floor", wing: "Block B", icon: "🧪", color: "#fff8e6", description: "Blood work, culture & biopsy tests" },
+  { id: "H2-DEPT-005", name: "Cardiology & Heart Centre",    shortName: "Cardiology",   floor: "1st Floor",    wing: "Wing C",  icon: "❤️", color: "#fde8ee", description: "Cardiac care, Cath Lab & Heart ICU" },
+  { id: "H2-DEPT-006", name: "Orthopaedics & Joint Clinic",  shortName: "Orthopaedics", floor: "1st Floor",    wing: "Wing C",  icon: "🦴", color: "#f3e8ff", description: "Fractures, joint replacement & spine" },
+  { id: "H2-DEPT-007", name: "Apollo 24/7 Pharmacy",         shortName: "Pharmacy",     floor: "Ground Floor", wing: "Block A", icon: "💊", color: "#e6faf5", description: "Round-the-clock prescription dispensing" },
+  { id: "H2-DEPT-008", name: "Paediatrics & NICU",           shortName: "Paediatrics",  floor: "2nd Floor",    wing: "Wing D",  icon: "👶", color: "#fff8e6", description: "Child health, immunisation & neonatal ICU" },
+  { id: "H2-DEPT-009", name: "Neurology & Brain Sciences",   shortName: "Neurology",    floor: "1st Floor",    wing: "Wing C",  icon: "🧠", color: "#f3e8ff", description: "Brain, nerve & stroke care" },
+  { id: "H2-DEPT-010", name: "Surgical OT Complex",          shortName: "Surgery",      floor: "3rd Floor",    wing: "Wing E",  icon: "🔬", color: "#EAF2FB", description: "General & laparoscopic surgical suites" },
+  { id: "H2-DEPT-011", name: "Oncology & Cancer Centre",     shortName: "Oncology",     floor: "3rd Floor",    wing: "Wing E",  icon: "🎗️", color: "#fde8ee", description: "Chemotherapy, radiation & cancer surgery" },
+  { id: "H2-DEPT-012", name: "Obstetrics & Maternity",       shortName: "Maternity",    floor: "2nd Floor",    wing: "Wing D",  icon: "🤰", color: "#fde8ee", description: "Birthing suites, maternity & gynecology" },
+  { id: "H2-DEPT-013", name: "ICU & Critical Care",          shortName: "ICU",          floor: "2nd Floor",    wing: "Wing D",  icon: "🏥", color: "#EAF2FB", description: "Ventilator support & critical monitoring" },
+  { id: "H2-DEPT-014", name: "Transplant & Organ Care",      shortName: "Transplant",   floor: "3rd Floor",    wing: "Wing E",  icon: "🫀", color: "#EAF2FB", description: "Kidney, liver & heart transplant ICU" },
+  { id: "H2-DEPT-015", name: "Blood Bank & Plasma Centre",   shortName: "Blood Bank",   floor: "Basement B1",  wing: "Basement",icon: "🩸", color: "#fde8ee", description: "24/7 blood & plasma availability" },
+  { id: "H2-DEPT-016", name: "Patient Cafeteria",            shortName: "Cafeteria",    floor: "Ground Floor", wing: "Block B", icon: "🍽️", color: "#fff8e6", description: "Hot meals, juices & healthy snacks" },
+  { id: "H2-DEPT-017", name: "Billing & Insurance Desk",     shortName: "Billing",      floor: "Ground Floor", wing: "Block A", icon: "💳", color: "#f3e8ff", description: "Cashless processing, TPA & billing" },
+  { id: "H2-DEPT-018", name: "Physiotherapy & Rehab",        shortName: "Physio",       floor: "1st Floor",    wing: "Wing C",  icon: "🏃", color: "#e6faf5", description: "Physical therapy & rehabilitation" },
+  { id: "H2-DEPT-019", name: "Dermatology & Skin Clinic",    shortName: "Dermatology",  floor: "1st Floor",    wing: "Wing C",  icon: "🧴", color: "#f3e8ff", description: "Skin care, allergy & aesthetic procedures" },
+  { id: "H2-DEPT-020", name: "Visitor Parking",              shortName: "Parking",      floor: "Basement B1",  wing: "Basement",icon: "🅿️", color: "#fff8e6", description: "Underground visitor parking & valet" },
+];
+
+export const H2_INITIAL_DOCTORS = [
+  { id: "H2-DOC-001", name: "Dr. Arjun Nair",       spec: "Chief Cardiologist",         deptId: "H2-DEPT-005", status: "available"  },
+  { id: "H2-DOC-002", name: "Dr. Kavitha Suresh",   spec: "Interventional Cardiology",  deptId: "H2-DEPT-005", status: "in_surgery" },
+  { id: "H2-DOC-003", name: "Dr. Mohan Krishnan",   spec: "Emergency Medicine Chief",   deptId: "H2-DEPT-001", status: "available"  },
+  { id: "H2-DOC-004", name: "Dr. Lakshmi Venkat",   spec: "Senior General Physician",   deptId: "H2-DEPT-002", status: "available"  },
+  { id: "H2-DOC-005", name: "Dr. Sudhir Pillai",    spec: "OPD Consultant",             deptId: "H2-DEPT-002", status: "on_leave"   },
+  { id: "H2-DOC-006", name: "Dr. Rajan Shetty",     spec: "Spine & Orthopaedic Surgeon",deptId: "H2-DEPT-006", status: "available"  },
+  { id: "H2-DOC-007", name: "Dr. Preethi Anand",    spec: "Chief Paediatrician",        deptId: "H2-DEPT-008", status: "available"  },
+  { id: "H2-DOC-008", name: "Dr. Venkatesan Raja",  spec: "Neuro Surgeon",              deptId: "H2-DEPT-009", status: "in_surgery" },
+  { id: "H2-DOC-009", name: "Dr. Bharati Krishnam", spec: "Senior Radiologist",         deptId: "H2-DEPT-003", status: "available"  },
+  { id: "H2-DOC-010", name: "Dr. Naveen Chari",     spec: "General Surgery Director",   deptId: "H2-DEPT-010", status: "available"  },
+  { id: "H2-DOC-011", name: "Dr. Suma Iyer",        spec: "Oncologist",                 deptId: "H2-DEPT-011", status: "available"  },
+  { id: "H2-DOC-012", name: "Dr. Jaya Balaji",      spec: "Obstetrician & Gynaecologist",deptId: "H2-DEPT-012", status: "in_surgery"},
+  { id: "H2-DOC-013", name: "Dr. Dinesh Sundar",    spec: "Critical Care Specialist",   deptId: "H2-DEPT-013", status: "available"  },
+  { id: "H2-DOC-014", name: "Dr. Revathi Murali",   spec: "Transplant Surgeon",         deptId: "H2-DEPT-014", status: "available"  },
+  { id: "H2-DOC-015", name: "Dr. Prakash Gopal",    spec: "Pathologist",                deptId: "H2-DEPT-004", status: "available"  },
+  { id: "H2-DOC-016", name: "Dr. Ananya Thomas",    spec: "Dermatologist",              deptId: "H2-DEPT-019", status: "available"  },
+  { id: "H2-DOC-017", name: "Dr. Ramkumar Babu",    spec: "Physiotherapist",            deptId: "H2-DEPT-018", status: "available"  },
+  { id: "H2-DOC-018", name: "Dr. Chitra Menon",     spec: "Neonatologist (NICU)",       deptId: "H2-DEPT-008", status: "available"  },
+  { id: "H2-DOC-019", name: "Dr. Saravanan Kumar",  spec: "Trauma Surgeon",             deptId: "H2-DEPT-001", status: "available"  },
+  { id: "H2-DOC-020", name: "Dr. Padmavathy Rajan", spec: "Surgical Oncologist",        deptId: "H2-DEPT-011", status: "on_leave"   },
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HOSPITALS REGISTRY — Super Admin has access to all hospitals
+// (H1 refs are patched below after HOSPITAL_LOCATIONS / DEPARTMENTS / INITIAL_DOCTORS are declared)
+// ══════════════════════════════════════════════════════════════════════════════
+export const HOSPITALS = {
+  H1: {
+    info:        HOSPITAL_INFO,
+    locations:   null, // patched below
+    departments: null, // patched below
+    doctors:     null, // patched below
+  },
+  H2: {
+    info:        HOSPITAL2_INFO,
+    locations:   H2_LOCATIONS,
+    departments: H2_DEPARTMENTS,
+    doctors:     H2_INITIAL_DOCTORS,
+  },
+};
+
 export function generateRoute(fromLocation, toDept) {
   // ── 1. Try graph-based Dijkstra route (from Admin-built map) ────────────
   try {
@@ -191,3 +295,8 @@ function _getGraphStore() {
 export function injectGraphStore(store) {
   _graphStore = store;
 }
+
+// Patch HOSPITALS.H1 now that HOSPITAL_LOCATIONS, DEPARTMENTS, INITIAL_DOCTORS are all declared
+HOSPITALS.H1.locations   = HOSPITAL_LOCATIONS;
+HOSPITALS.H1.departments = DEPARTMENTS;
+HOSPITALS.H1.doctors     = INITIAL_DOCTORS;

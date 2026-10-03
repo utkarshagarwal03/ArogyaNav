@@ -6,12 +6,17 @@ export default function AiChatbot({ onSelectDestination, currentLocation, doctor
   const [isOpen, setIsOpen]       = useState(false);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping]   = useState(false);
+
+  const isApollo    = currentLocation?.id?.startsWith('H2-');
+  const hospitalName = isApollo ? 'Apollo Hospitals' : 'Manipal Hospital';
+  const exampleDoc   = isApollo ? 'Dr. Arjun Nair' : 'Dr. Rajesh Sharma';
+
   const [messages, setMessages]   = useState([
     {
       id: 1,
       sender: 'bot',
-      text: "Hello! I am **Navi AI**, your smart hospital assistant for **Manipal Hospital**. 🏥\n\nYou can ask about symptoms, find departments, or check if specific doctors (e.g. *Dr. Rajesh Sharma*) are available today!",
-      suggestions: ["Is Dr. Rajesh Sharma available?", "I am vomiting / stomach pain", "Where is Pharmacy?", "Visiting hours"],
+      text: `Hello! I am **Navi AI**, your smart hospital assistant for **${hospitalName}**. 🏥\n\nYou can ask about symptoms, find departments, or check doctor availability (e.g. *${exampleDoc}*)!`,
+      suggestions: [`Is ${exampleDoc} available?`, 'I have chest pain', 'Where is Pharmacy?', 'Visiting hours'],
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -40,7 +45,7 @@ export default function AiChatbot({ onSelectDestination, currentLocation, doctor
     setIsTyping(true);
 
     setTimeout(() => {
-      const response = processAiQuery(text, doctors);
+      const response = processAiQuery(text, doctors, currentLocation);
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',
