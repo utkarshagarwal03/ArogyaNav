@@ -214,9 +214,10 @@ function buildDefaultGraph() {
 }
 
 // ─── LocalStorage persistence ─────────────────────────────────────────────────
-export function loadGraph() {
+export function loadGraph(hid = 'H1') {
+  const key = STORAGE_KEY + '_' + hid;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed.version === 2) return parsed;
@@ -224,12 +225,20 @@ export function loadGraph() {
   } catch (e) {
     console.warn('ArogyaNav: Could not load map graph from localStorage', e);
   }
-  return buildDefaultGraph();
+  if (hid === 'H1') return buildDefaultGraph();
+  
+  const empty = buildDefaultGraph();
+  Object.keys(empty.floors).forEach(f => {
+    empty.floors[f].nodes = {};
+    empty.floors[f].edges = [];
+    empty.floors[f].imageDataUrl = null;
+  });
+  return empty;
 }
 
-export function saveGraph(graph) {
+export function saveGraph(hid, graph) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(graph));
+    localStorage.setItem(STORAGE_KEY + '_' + hid, JSON.stringify(graph));
     return true;
   } catch (e) {
     console.error('ArogyaNav: Could not save map graph', e);
@@ -357,15 +366,15 @@ export function dijkstra(graph, startFloor, startNodeId, endFloor, endNodeId, op
 }
 
 // ─── Generate human-readable route steps from Dijkstra path ──────────────────
-export function generateRouteFromGraph(fromLocation, toDept) {
+export function generateRouteFromGraph(hospitalId = 'H1', fromLocation, toDept) {
   if (!fromLocation || !toDept) return null;
 
-  const graph = loadGraph();
+  const graph = loadGraph(hospitalId);
 
   const startFloor  = floorKeyFromLabel(fromLocation.floor);
   const startNodeId = fromLocation.id; // e.g. "LOC-A2"
 
-  const endNodeId = DEPT_NODE_MAP[toDept.id];
+  const endNodeId = DEPT_NODE_MAP[toDept.id] || toDept.id;
   if (!endNodeId) return null;
 
   const endFloor = floorKeyFromLabel(toDept.floor);

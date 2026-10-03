@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Stage, Layer, Circle, Line, Text, Group, Image as KonvaImage, Rect } from 'react-konva';
 import { loadGraph, saveGraph, resetGraph, FLOOR_KEYS, FLOOR_LABELS, NODE_TYPES } from '../data/mapGraphStore';
+import { pushMapToCloud } from '../data/firebaseSync';
 import {
   Plus, Trash2, Link, MousePointer, Save, RotateCcw,
   Upload, X, Check, MapPin, ChevronLeft, Info,
@@ -42,8 +43,8 @@ function Grid() {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 // Renders as a fullscreen fixed overlay so the canvas always has maximum space.
-export default function MapEditorView({ onClose }) {
-  const [graph, setGraph]               = useState(() => loadGraph());
+export default function MapEditorView({ hospitalId = 'H1', onClose }) {
+  const [graph, setGraph]               = useState(() => loadGraph(hospitalId));
   const [activeFloor, setActiveFloor]   = useState('GF');
   const [tool, setTool]                 = useState('select');
   const [addNodeType, setAddNodeType]   = useState('checkpoint');
@@ -207,7 +208,8 @@ export default function MapEditorView({ onClose }) {
 
   // ── Save ──────────────────────────────────────────────────────────────────
   function handleSave() {
-    saveGraph(graph);
+    saveGraph(hospitalId, graph);
+    pushMapToCloud(hospitalId, graph);
     setSavedMsg(true);
     setTimeout(() => setSavedMsg(false), 2000);
   }

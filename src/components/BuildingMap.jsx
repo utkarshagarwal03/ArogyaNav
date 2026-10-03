@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Stage, Layer, Circle, Line, Text, Group, Image as KonvaImage, Rect } from 'react-konva';
 import { loadGraph, FLOOR_KEYS, NODE_TYPES, floorKeyFromLabel, dijkstra, DEPT_NODE_MAP } from '../data/mapGraphStore';
 import { DEPARTMENTS } from '../data/hospitalData';
@@ -13,8 +13,8 @@ function truncate(s, n = 16) {
 }
 function midpoint(x1, y1, x2, y2) { return { x: (x1 + x2) / 2, y: (y1 + y2) / 2 }; }
 
-export default function BuildingMap({ currentLocation, destination, onSelectRoom }) {
-  const graph = useMemo(() => loadGraph(), []);
+export default function BuildingMap({ hospitalId = 'H1', currentLocation, destination, onSelectRoom }) {
+  const graph = useMemo(() => loadGraph(hospitalId), [hospitalId]);
   
   const startFloorKey = currentLocation ? floorKeyFromLabel(currentLocation.floor) : 'GF';
   const endFloorKey   = destination ? floorKeyFromLabel(destination.floor) : null;

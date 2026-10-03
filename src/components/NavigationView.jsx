@@ -13,7 +13,7 @@ const DIRECTION_CONFIG = {
   arrived:  { icon: <CheckCircle size={46} color="#fff" />, label: 'You Have Arrived!', bg: 'linear-gradient(160deg,#06D6A0,#059173)' },
 };
 
-export default function NavigationView({ currentLocation, destination, onScanAgain }) {
+export default function NavigationView({ hospitalId = 'H1', currentLocation, destination, onScanAgain }) {
   const [loading, setLoading]   = useState(true);
   const [route, setRoute]       = useState(null);
   const [stepIdx, setStepIdx]   = useState(0);
@@ -24,7 +24,7 @@ export default function NavigationView({ currentLocation, destination, onScanAga
     setLoading(true);
     // Simulate API latency
     const t = setTimeout(() => {
-      const result = generateRoute(currentLocation, destination);
+      const result = generateRoute(hospitalId, currentLocation, destination);
       setRoute(result);
       setStepIdx(0);
       setLoading(false);
@@ -85,6 +85,7 @@ export default function NavigationView({ currentLocation, destination, onScanAga
 
       {viewMode === 'map' ? (
         <BuildingMap
+          hospitalId={hospitalId}
           currentLocation={currentLocation}
           destination={destination}
         />

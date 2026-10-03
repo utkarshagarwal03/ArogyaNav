@@ -84,6 +84,8 @@ function getInitialState() {
   return { screen: 'scan', location: null, destination: null, isAdmin };
 }
 
+import { pullAllFromCloud } from './data/firebaseSync';
+
 export default function App() {
   const [initialState]                 = useState(getInitialState);
   const [screen, setScreen]            = useState(initialState.screen);
@@ -99,6 +101,29 @@ export default function App() {
   const [selectedRole, setSelectedRole]   = useState('super'); // which role user is trying to log in as
   const [pinInput, setPinInput]           = useState('');
   const [pinError, setPinError]           = useState(false);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(true);
+
+  useEffect(() => {
+    pullAllFromCloud().then((synced) => {
+      if (synced) {
+        // Re-calculate initial state now that cloud data is loaded
+        const state = getInitialState();
+        setScreen(state.screen);
+        setLocation(state.location);
+        setDestination(state.destination);
+      }
+      setIsCloudSyncing(false);
+    });
+  }, []);
+
+  if (isCloudSyncing) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', width: '100vw', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: '#fff', gap: 16 }}>
+        <div style={{ width: 40, height: 40, border: '4px solid #0077B6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <p style={{ fontWeight: 600, letterSpacing: '0.05em' }}>Syncing cloud data...</p>
+      </div>
+    );
+  }
 
   function handlePinSubmit(e) {
     e.preventDefault();
@@ -222,11 +247,16 @@ export default function App() {
         {screen === 'scan'     && showPinModal  && <div style={{ flex: 1, background: '#f8fafc' }} />}
         {screen === 'select'   && (() => {
           // Determine which hospital this location belongs to
-          const isH2Loc = currentLocation?.id?.startsWith('H2-');
-          const activeDepts = isH2Loc ? (HOSPITALS.H2.departments || []) : DEPARTMENTS;
-          const activeDoctors = isH2Loc ? h2Doctors : doctors;
+          let activeHid = 'H1';
+          if (currentLocation) {
+            const foundHid = Object.keys(HOSPITALS).find(id => HOSPITALS[id]?.locations?.[currentLocation.id]);
+            if (foundHid) activeHid = foundHid;
+          }
+          const activeDepts = HOSPITALS[activeHid]?.departments || [];
+          const activeDoctors = activeHid === 'H2' ? h2Doctors : (activeHid === 'H1' ? doctors : []);
           return (
             <DestinationView
+              hospitalId={activeHid}
               currentLocation={currentLocation}
               onDestinationSelected={handleDestinationSelected}
               departments={activeDepts}
@@ -234,7 +264,14 @@ export default function App() {
             />
           );
         })()}
-        {screen === 'navigate' && <NavigationView currentLocation={currentLocation} destination={destination} onScanAgain={handleScanAgain} />}
+        {screen === 'navigate' && (() => {
+          let activeHid = 'H1';
+          if (currentLocation) {
+            const foundHid = Object.keys(HOSPITALS).find(id => HOSPITALS[id]?.locations?.[currentLocation.id]);
+            if (foundHid) activeHid = foundHid;
+          }
+          return <NavigationView hospitalId={activeHid} currentLocation={currentLocation} destination={destination} onScanAgain={handleScanAgain} />;
+        })()}
         {screen === 'admin'    && (
           <AdminView
             adminRole={adminRole}

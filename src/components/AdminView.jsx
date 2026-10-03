@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react';
 import { HOSPITAL_LOCATIONS, HOSPITAL_INFO, HOSPITALS, ADMIN_ROLES, saveCustomHospitals } from '../data/hospitalData';
+import { pushHospitalsToCloud } from '../data/firebaseSync';
 import { loadGraph } from '../data/mapGraphStore';
 import {
   QrCode, Printer, Download, UserCheck, ArrowLeft,
@@ -190,7 +191,7 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
   // If it's a new custom hospital, dynamically pull nodes from the map graph
   // so the QR manager shows the nodes the user just plotted.
   if (viewingHospitalId !== 'H1' && viewingHospitalId !== 'H2') {
-    const graph = loadGraph();
+    const graph = loadGraph(viewingHospitalId);
     const dynamicLocs = {};
     Object.values(graph.floors || {}).forEach(floor => {
       if (floor.nodes) {
@@ -301,6 +302,7 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
               ADMIN_ROLES[pin] = { role: 'hospital', label: `Hospital Admin (${name})`, color: '#475569', hospitalId: newId };
               
               saveCustomHospitals();
+              pushHospitalsToCloud();
               setActiveSuperHospital(newId);
               
               // Ask to set up Map Editor
@@ -465,7 +467,7 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
             Loading Map Editor...
           </div>
         }>
-          <MapEditorView onClose={() => setMapEditorOpen(false)} />
+          <MapEditorView hospitalId={viewingHospitalId} onClose={() => { setMapEditorOpen(false); }} />
         </Suspense>
       )}
     </div>

@@ -213,12 +213,12 @@ export const ADMIN_ROLES = {
   '9012': { role: 'hospital',  label: 'Hospital Admin (Apollo)',  color: '#059173', hospitalId: 'H2' },
 };
 
-export function generateRoute(fromLocation, toDept) {
+export function generateRoute(hospitalId = 'H1', fromLocation, toDept) {
   // ── 1. Try graph-based Dijkstra route (from Admin-built map) ────────────
   try {
     const { generateRouteFromGraph } = _getGraphStore();
     if (generateRouteFromGraph) {
-      const graphRoute = generateRouteFromGraph(fromLocation, toDept);
+      const graphRoute = generateRouteFromGraph(hospitalId, fromLocation, toDept);
       if (graphRoute) return graphRoute;
     }
   } catch (_) { /* fallthrough to hardcoded */ }
@@ -301,25 +301,25 @@ function _getGraphStore() {
 export function injectGraphStore(store) {
   _graphStore = store;
   
-  // Hydrate custom hospital locations dynamically from the graph
-  const graph = store.loadGraph ? store.loadGraph() : null;
-  if (graph) {
-    const dynamicLocs = {};
-    Object.values(graph.floors || {}).forEach(floor => {
-      if (floor.nodes) {
-        Object.values(floor.nodes).forEach(n => {
-          if (n.type === 'checkpoint' || n.type === 'entrance' || n.type === 'elevator' || n.type === 'stairs' || n.qrCode) {
-            const locId = n.qrCode || n.id;
-            dynamicLocs[locId] = { id: locId, name: n.name, floor: floor.label || 'Custom', wing: '' };
-          }
-        });
-      }
-    });
-    
-    // Assign to all custom hospitals
+  // Hydrate custom hospital locations dynamically from their specific graphs
+  if (store.loadGraph) {
     Object.keys(HOSPITALS).forEach(hid => {
       if (hid !== 'H1' && hid !== 'H2') {
-        HOSPITALS[hid].locations = { ...dynamicLocs };
+        const graph = store.loadGraph(hid);
+        if (graph) {
+          const dynamicLocs = {};
+          Object.values(graph.floors || {}).forEach(floor => {
+            if (floor.nodes) {
+              Object.values(floor.nodes).forEach(n => {
+                if (n.type === 'checkpoint' || n.type === 'entrance' || n.type === 'elevator' || n.type === 'stairs' || n.qrCode) {
+                  const locId = n.qrCode || n.id;
+                  dynamicLocs[locId] = { id: locId, name: n.name, floor: floor.label || 'Custom', wing: '' };
+                }
+              });
+            }
+          });
+          HOSPITALS[hid].locations = { ...dynamicLocs };
+        }
       }
     });
   }

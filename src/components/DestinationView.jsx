@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import BuildingMap from './BuildingMap';
 import { Search, MapPin, ChevronRight, List, Map } from 'lucide-react';
 
-export default function DestinationView({ currentLocation, onDestinationSelected, departments = [], doctors = [] }) {
+export default function DestinationView({ hospitalId = 'H1', currentLocation, onDestinationSelected, departments = [], doctors = [] }) {
   const [query, setQuery] = useState('');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
 
@@ -100,6 +100,7 @@ export default function DestinationView({ currentLocation, onDestinationSelected
 
       {viewMode === 'map' ? (
         <BuildingMap
+          hospitalId={hospitalId}
           currentLocation={currentLocation}
           onSelectRoom={dept => onDestinationSelected(dept)}
         />
