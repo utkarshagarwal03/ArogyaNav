@@ -207,6 +207,12 @@ export const HOSPITALS = {
   },
 };
 
+export const ADMIN_ROLES = {
+  '1234': { role: 'super',     label: 'Super Admin',              color: '#0f172a', hospitalId: null },
+  '5678': { role: 'hospital',  label: 'Hospital Admin (Manipal)', color: '#0077B6', hospitalId: 'H1' },
+  '9012': { role: 'hospital',  label: 'Hospital Admin (Apollo)',  color: '#059173', hospitalId: 'H2' },
+};
+
 export function generateRoute(fromLocation, toDept) {
   // ── 1. Try graph-based Dijkstra route (from Admin-built map) ────────────
   try {
@@ -294,9 +300,60 @@ function _getGraphStore() {
 // Called once by the app bootstrap so generateRoute can use Dijkstra synchronously.
 export function injectGraphStore(store) {
   _graphStore = store;
+  
+  // Hydrate custom hospital locations dynamically from the graph
+  const graph = store.loadGraph ? store.loadGraph() : null;
+  if (graph) {
+    const dynamicLocs = {};
+    Object.values(graph.floors || {}).forEach(floor => {
+      if (floor.nodes) {
+        Object.values(floor.nodes).forEach(n => {
+          if (n.type === 'checkpoint' || n.type === 'entrance' || n.type === 'elevator' || n.type === 'stairs' || n.qrCode) {
+            const locId = n.qrCode || n.id;
+            dynamicLocs[locId] = { id: locId, name: n.name, floor: floor.label || 'Custom', wing: '' };
+          }
+        });
+      }
+    });
+    
+    // Assign to all custom hospitals
+    Object.keys(HOSPITALS).forEach(hid => {
+      if (hid !== 'H1' && hid !== 'H2') {
+        HOSPITALS[hid].locations = { ...dynamicLocs };
+      }
+    });
+  }
 }
 
 // Patch HOSPITALS.H1 now that HOSPITAL_LOCATIONS, DEPARTMENTS, INITIAL_DOCTORS are all declared
 HOSPITALS.H1.locations   = HOSPITAL_LOCATIONS;
 HOSPITALS.H1.departments = DEPARTMENTS;
 HOSPITALS.H1.doctors     = INITIAL_DOCTORS;
+
+// Load custom hospitals from localStorage
+try {
+  const customData = localStorage.getItem('arogyanav_custom_hospitals');
+  if (customData) {
+    const parsed = JSON.parse(customData);
+    if (parsed.hospitals) Object.assign(HOSPITALS, parsed.hospitals);
+    if (parsed.roles) Object.assign(ADMIN_ROLES, parsed.roles);
+  }
+} catch (e) {
+  console.warn('Could not load custom hospitals', e);
+}
+
+// Function to save custom hospitals
+export function saveCustomHospitals() {
+  const customHospitals = {};
+  const customRoles = {};
+  Object.keys(HOSPITALS).forEach(hid => {
+    if (hid !== 'H1' && hid !== 'H2') customHospitals[hid] = HOSPITALS[hid];
+  });
+  Object.keys(ADMIN_ROLES).forEach(pin => {
+    const r = ADMIN_ROLES[pin];
+    if (r.hospitalId !== 'H1' && r.hospitalId !== 'H2' && r.role !== 'super') {
+      customRoles[pin] = r;
+    }
+  });
+  localStorage.setItem('arogyanav_custom_hospitals', JSON.stringify({ hospitals: customHospitals, roles: customRoles }));
+}

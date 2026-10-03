@@ -8,7 +8,7 @@ import AdminView        from './components/AdminView';
 import {
   HOSPITAL_LOCATIONS, DEPARTMENTS, HOSPITAL_INFO,
   INITIAL_DOCTORS, injectGraphStore,
-  HOSPITAL2_INFO, H2_INITIAL_DOCTORS, H2_LOCATIONS, H2_DEPARTMENTS, HOSPITALS,
+  HOSPITAL2_INFO, H2_INITIAL_DOCTORS, H2_LOCATIONS, H2_DEPARTMENTS, HOSPITALS, ADMIN_ROLES,
 } from './data/hospitalData';
 import * as mapGraphStore from './data/mapGraphStore';
 import { QrCode, MapPin, Navigation, Check, ExternalLink, ShieldAlert } from 'lucide-react';
@@ -22,15 +22,7 @@ const STEPS = [
   { id: 'navigate', label: 'Navigate',    icon: Navigation },
 ];
 
-// Admin role config
-// Super Admin         PIN: 1234 — full access to ALL hospitals (QR Codes + Map Editor)
-// Hospital 1 Admin    PIN: 5678 — Manipal Hospital daily ops (Doctor Attendance)
-// Hospital 2 Admin    PIN: 9012 — Apollo Hospitals daily ops (Doctor Attendance)
-const ADMIN_ROLES = {
-  '1234': { role: 'super',     label: 'Super Admin',              color: '#0f172a', hospitalId: null },
-  '5678': { role: 'hospital',  label: 'Hospital Admin (Manipal)', color: '#0077B6', hospitalId: 'H1' },
-  '9012': { role: 'hospital',  label: 'Hospital Admin (Apollo)',  color: '#059173', hospitalId: 'H2' },
-};
+
 
 function StepBar({ currentStep }) {
   if (currentStep === 'admin') return null;
@@ -53,26 +45,43 @@ function StepBar({ currentStep }) {
   );
 }
 
-// Merged location lookup across both hospitals (used by URL QR deep-links)
-const ALL_LOCATIONS = { ...HOSPITAL_LOCATIONS, ...H2_LOCATIONS };
-// Merged department lookup across both hospitals
-const ALL_DEPARTMENTS = [...DEPARTMENTS, ...H2_DEPARTMENTS];
+// Dynamic location lookup across all hospitals (used by URL QR deep-links)
+function getAllLocations() {
+  const locs = {};
+  Object.values(HOSPITALS).forEach(h => {
+    if (h.locations) Object.assign(locs, h.locations);
+  });
+  return locs;
+}
+
+// Dynamic department lookup across all hospitals
+function getAllDepartments() {
+  const depts = [];
+  Object.values(HOSPITALS).forEach(h => {
+    if (h.departments) depts.push(...h.departments);
+  });
+  return depts;
+}
 
 function getInitialState() {
+  const isAdmin = window.location.pathname.startsWith('/admin');
   try {
     const params = new URLSearchParams(window.location.search);
     const locId  = params.get('loc') || params.get('from') || params.get('location');
     const deptId = params.get('to')  || params.get('dept');
-    if (locId && ALL_LOCATIONS[locId]) {
-      const loc  = ALL_LOCATIONS[locId];
+    const allLocs = getAllLocations();
+    const allDepts = getAllDepartments();
+    
+    if (locId && allLocs[locId]) {
+      const loc  = allLocs[locId];
       let   dept = null;
-      if (deptId) dept = ALL_DEPARTMENTS.find(d => d.id === deptId || d.shortName.toLowerCase() === deptId.toLowerCase());
-      return { screen: dept ? 'navigate' : 'select', location: loc, destination: dept };
+      if (deptId) dept = allDepts.find(d => d.id === deptId || d.shortName.toLowerCase() === deptId.toLowerCase());
+      return { screen: dept ? 'navigate' : 'select', location: loc, destination: dept, isAdmin };
     }
   } catch (e) {
     console.warn('Error parsing URL parameters:', e);
   }
-  return { screen: 'scan', location: null, destination: null };
+  return { screen: 'scan', location: null, destination: null, isAdmin };
 }
 
 export default function App() {
@@ -86,33 +95,18 @@ export default function App() {
   // Admin auth state
   const [adminRole, setAdminRole]         = useState(null);   // null | 'super' | 'hospital'
   const [adminHospitalId, setAdminHospitalId] = useState(null); // null | 'H1' | 'H2'
-  const [showPinModal, setShowPinModal]   = useState(false);
+  const [showPinModal, setShowPinModal]   = useState(initialState.isAdmin);
   const [selectedRole, setSelectedRole]   = useState('super'); // which role user is trying to log in as
   const [pinInput, setPinInput]           = useState('');
   const [pinError, setPinError]           = useState(false);
 
-  function handleAdminClick() {
-    if (screen === 'admin') {
-      setAdminRole(null);
-      setAdminHospitalId(null);
-      setScreen('scan');
-    } else {
-      if (adminRole) {
-        setScreen('admin');
-      } else {
-        setShowPinModal(true);
-        setPinInput('');
-        setPinError(false);
-        setSelectedRole('super');
-      }
-    }
-  }
-
   function handlePinSubmit(e) {
     e.preventDefault();
-    // Map role card → expected PIN
-    const PIN_MAP = { super: '1234', h1admin: '5678', h2admin: '9012' };
-    const expectedPin = PIN_MAP[selectedRole];
+    const expectedPin = Object.keys(ADMIN_ROLES).find(pin => {
+      if (selectedRole === 'super') return ADMIN_ROLES[pin].role === 'super';
+      return ADMIN_ROLES[pin].hospitalId === selectedRole;
+    });
+    
     if (pinInput === expectedPin) {
       const matched = ADMIN_ROLES[pinInput];
       setAdminRole(matched.role);
@@ -150,12 +144,6 @@ export default function App() {
     setLocation(null); setDestination(null); setScreen('scan');
   }
 
-  // Determine label for header button
-  const matchedRole = Object.values(ADMIN_ROLES).find(r =>
-    r.role === adminRole && r.hospitalId === adminHospitalId
-  );
-  const roleLabel = matchedRole?.label ?? null;
-
   return (
     <div className="app-shell">
       {/* Header */}
@@ -169,27 +157,19 @@ export default function App() {
             </div>
           </div>
 
-          <button
-            onClick={handleAdminClick}
-            style={{
-              background: screen === 'admin' ? '#fff' : 'rgba(255,255,255,0.2)',
-              color: screen === 'admin' ? 'var(--color-primary)' : '#fff',
-              border: 'none', borderRadius: 20, padding: '6px 12px',
-              fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.2s',
-            }}
-          >
-            <ShieldAlert size={14} />
-            {screen === 'admin' ? 'Back to App' : (roleLabel ? `${roleLabel}` : 'Admin Login')}
-          </button>
+
         </div>
 
         {/* Sub-header */}
         {(() => {
           // Resolve which hospital info to show
-          const activeHospitalInfo = adminHospitalId
-            ? (adminHospitalId === 'H1' ? HOSPITAL_INFO : HOSPITAL2_INFO)
-            : (screen === 'admin' && adminRole === 'super' ? null : null);
+          let activeHospitalInfo = null;
+          if (adminHospitalId) {
+            activeHospitalInfo = HOSPITALS[adminHospitalId]?.info;
+          } else if (currentLocation) {
+            const hid = Object.keys(HOSPITALS).find(id => HOSPITALS[id]?.locations?.[currentLocation.id]);
+            if (hid) activeHospitalInfo = HOSPITALS[hid].info;
+          }
 
           if (activeHospitalInfo) {
             return (
@@ -201,20 +181,24 @@ export default function App() {
                   <span>📍 {activeHospitalInfo.name} ({activeHospitalInfo.campus})</span>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <a href={activeHospitalInfo.mapsLink} target="_blank" rel="noopener noreferrer"
-                    style={{ color: '#fff', textDecoration: 'underline', opacity: 0.9, display: 'flex', alignItems: 'center', gap: 3 }}>
-                    Google Maps <ExternalLink size={10} />
-                  </a>
-                  <a href={activeHospitalInfo.osmLink} target="_blank" rel="noopener noreferrer"
-                    style={{ color: '#fff', textDecoration: 'underline', opacity: 0.9, display: 'flex', alignItems: 'center', gap: 3 }}>
-                    OSM <ExternalLink size={10} />
-                  </a>
+                  {activeHospitalInfo.mapsLink && (
+                    <a href={activeHospitalInfo.mapsLink} target="_blank" rel="noopener noreferrer"
+                      style={{ color: '#fff', textDecoration: 'underline', opacity: 0.9, display: 'flex', alignItems: 'center', gap: 3 }}>
+                      Google Maps <ExternalLink size={10} />
+                    </a>
+                  )}
+                  {activeHospitalInfo.osmLink && (
+                    <a href={activeHospitalInfo.osmLink} target="_blank" rel="noopener noreferrer"
+                      style={{ color: '#fff', textDecoration: 'underline', opacity: 0.9, display: 'flex', alignItems: 'center', gap: 3 }}>
+                      OSM <ExternalLink size={10} />
+                    </a>
+                  )}
                 </div>
               </div>
             );
           }
 
-          // Generic label for public / super admin (no single hospital)
+          // Generic label for public before scanning / super admin
           return (
             <div style={{
               marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.2)',
@@ -224,7 +208,7 @@ export default function App() {
                 <span>🏥 Multi-Hospital Indoor Navigation Platform</span>
               </div>
               <div style={{ opacity: 0.7, fontSize: '0.72rem' }}>
-                Bengaluru · Chennai
+                {Object.values(HOSPITALS).map(h => h.info.campus.split(',').pop().trim()).join(' · ')}
               </div>
             </div>
           );
@@ -234,7 +218,8 @@ export default function App() {
       <StepBar currentStep={screen} />
 
       <main id="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {screen === 'scan'     && <QrScannerView onLocationScanned={handleLocationScanned} />}
+        {screen === 'scan'     && !showPinModal && <QrScannerView onLocationScanned={handleLocationScanned} />}
+        {screen === 'scan'     && showPinModal  && <div style={{ flex: 1, background: '#f8fafc' }} />}
         {screen === 'select'   && (() => {
           // Determine which hospital this location belongs to
           const isH2Loc = currentLocation?.id?.startsWith('H2-');
@@ -257,7 +242,15 @@ export default function App() {
             doctors={doctors}
             h2Doctors={h2Doctors}
             onUpdateDoctorStatus={handleUpdateDoctorStatus}
-            onBackToApp={() => { setAdminRole(null); setAdminHospitalId(null); setScreen('scan'); }}
+            onBackToApp={() => { 
+              setAdminRole(null); 
+              setAdminHospitalId(null); 
+              setScreen('scan'); 
+              if (window.location.pathname.startsWith('/admin') && window.history.pushState) {
+                const clean = window.location.protocol + '//' + window.location.host + '/';
+                window.history.pushState({ path: clean }, '', clean);
+              }
+            }}
           />
         )}
       </main>
@@ -291,30 +284,37 @@ export default function App() {
               </p>
             </div>
 
-            {/* Role selector — 3 cards */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              {[
-                { id: 'super',    label: 'Super Admin',    desc: 'All Hospitals · Map & QR', icon: '🛡️', accent: '#0f172a' },
-                { id: 'h1admin',  label: 'Manipal Admin',  desc: 'Manipal Hospital, BLR',    icon: '🏥', accent: '#0077B6' },
-                { id: 'h2admin',  label: 'Apollo Admin',   desc: 'Apollo Hospitals, Chennai', icon: '🏨', accent: '#059173' },
-              ].map(r => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => { setSelectedRole(r.id); setPinError(false); setPinInput(''); }}
-                  style={{
-                    flex: 1, padding: '10px 6px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
-                    border: selectedRole === r.id ? `2px solid ${r.accent}` : '2px solid #e2e8f0',
-                    background: selectedRole === r.id ? `${r.accent}11` : '#f8fafc',
-                    color: selectedRole === r.id ? r.accent : '#64748b',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{ fontSize: '1.3rem', marginBottom: 4 }}>{r.icon}</div>
-                  <div style={{ fontWeight: 700, fontSize: '0.78rem' }}>{r.label}</div>
-                  <div style={{ fontSize: '0.66rem', opacity: 0.75, marginTop: 2 }}>{r.desc}</div>
-                </button>
-              ))}
+            {/* Role selector — dynamic vertical list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '220px', overflowY: 'auto', paddingRight: 4 }}>
+              {Object.keys(ADMIN_ROLES).map(pin => {
+                const r = ADMIN_ROLES[pin];
+                const isSuper = r.role === 'super';
+                const rId = isSuper ? 'super' : r.hospitalId;
+                const icon = isSuper ? '🛡️' : '🏥';
+                const desc = isSuper ? 'All Hospitals · Map & QR' : (HOSPITALS[r.hospitalId]?.info?.campus || 'New Hospital');
+                
+                return (
+                  <button
+                    key={rId}
+                    type="button"
+                    onClick={() => { setSelectedRole(rId); setPinError(false); setPinInput(''); }}
+                    style={{
+                      flex: 1, padding: '10px 12px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                      border: selectedRole === rId ? `2px solid ${r.color}` : '2px solid #e2e8f0',
+                      background: selectedRole === rId ? `${r.color}11` : '#f8fafc',
+                      color: selectedRole === rId ? r.color : '#64748b',
+                      transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', gap: 12
+                    }}
+                  >
+                    <div style={{ fontSize: '1.5rem' }}>{icon}</div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>{r.label}</div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.8, marginTop: 2 }}>{desc}</div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             {/* PIN form */}
@@ -343,7 +343,13 @@ export default function App() {
               )}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" className="btn btn-ghost"
-                  onClick={() => setShowPinModal(false)}
+                  onClick={() => {
+                    setShowPinModal(false);
+                    if (window.location.pathname.startsWith('/admin') && window.history.pushState) {
+                      const clean = window.location.protocol + '//' + window.location.host + '/';
+                      window.history.pushState({ path: clean }, '', clean);
+                    }
+                  }}
                   style={{ flex: 1, padding: 12, fontSize: '0.88rem' }}>
                   Cancel
                 </button>
@@ -355,9 +361,7 @@ export default function App() {
               </div>
             </form>
 
-            <p style={{ margin: 0, fontSize: '0.7rem', color: '#94a3b8', textAlign: 'center' }}>
-              Super Admin: <strong>1234</strong> &nbsp;|&nbsp; Manipal Admin: <strong>5678</strong> &nbsp;|&nbsp; Apollo Admin: <strong>9012</strong>
-            </p>
+
           </div>
         </div>
       )}

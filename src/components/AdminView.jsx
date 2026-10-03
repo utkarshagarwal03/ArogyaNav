@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react';
-import { HOSPITAL_LOCATIONS, HOSPITAL_INFO, HOSPITALS } from '../data/hospitalData';
+import { HOSPITAL_LOCATIONS, HOSPITAL_INFO, HOSPITALS, ADMIN_ROLES, saveCustomHospitals } from '../data/hospitalData';
+import { loadGraph } from '../data/mapGraphStore';
 import {
   QrCode, Printer, Download, UserCheck, ArrowLeft,
   CheckCircle2, Clock, XCircle, Search, Sparkles, Map, Crown, Building2,
@@ -184,7 +185,25 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
   const hospitalInfo    = hospitalData.info;
   const hospitalDepts   = hospitalData.departments || [];
   const hospitalDoctors = viewingHospitalId === 'H1' ? doctors : h2Doctors;
-  const hospitalLocs    = viewingHospitalId === 'H1' ? HOSPITAL_LOCATIONS : (hospitalData.locations || {});
+  let hospitalLocs = viewingHospitalId === 'H1' ? HOSPITAL_LOCATIONS : (hospitalData.locations || {});
+  
+  // If it's a new custom hospital, dynamically pull nodes from the map graph
+  // so the QR manager shows the nodes the user just plotted.
+  if (viewingHospitalId !== 'H1' && viewingHospitalId !== 'H2') {
+    const graph = loadGraph();
+    const dynamicLocs = {};
+    Object.values(graph.floors || {}).forEach(floor => {
+      if (floor.nodes) {
+        Object.values(floor.nodes).forEach(n => {
+          if (n.type === 'checkpoint' || n.type === 'entrance' || n.type === 'elevator' || n.type === 'stairs' || n.qrCode) {
+            const locId = n.qrCode || n.id;
+            dynamicLocs[locId] = { id: locId, name: n.name, floor: floor.label || 'Custom', wing: '' };
+          }
+        });
+      }
+    });
+    hospitalLocs = Object.keys(dynamicLocs).length > 0 ? dynamicLocs : hospitalLocs;
+  }
   const accent          = HOSPITAL_ACCENTS[viewingHospitalId] || HOSPITAL_ACCENTS.H1;
 
   return (
@@ -231,10 +250,10 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
 
       {/* ── Super Admin: Hospital Switcher ─────────────────────────────────── */}
       {isSuperAdmin && (
-        <div style={{ display: 'flex', gap: 8, padding: '10px 0 4px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 0 4px' }}>
           {Object.values(HOSPITALS).map(h => {
             const hid = h.info.id;
-            const acc = HOSPITAL_ACCENTS[hid];
+            const acc = HOSPITAL_ACCENTS[hid] || { color: '#0f172a', bg: '#0f172a', light: '#f8fafc', border: '#cbd5e1' };
             const active = activeSuperHospital === hid;
             return (
               <button
@@ -258,6 +277,46 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
               </button>
             );
           })}
+          <button
+            type="button"
+            onClick={() => {
+              const name = prompt("Enter new hospital name:");
+              if (!name) return;
+              const campus = prompt("Enter campus location:");
+              if (!campus) return;
+              const pin = prompt(`Enter a 4-digit Admin PIN for ${name}:`);
+              if (!pin) return;
+              
+              const newCount = Object.keys(HOSPITALS).length + 1;
+              const newId = 'H' + newCount;
+              HOSPITALS[newId] = {
+                info: { id: newId, name, campus, mapsLink: '', osmLink: '', helpline: '', productionUrl: baseUrl },
+                locations: {},
+                departments: [],
+                doctors: []
+              };
+              HOSPITAL_ACCENTS[newId] = { color: '#475569', bg: '#475569', light: '#f1f5f9', border: '#94a3b8' };
+              
+              // Add to ADMIN_ROLES
+              ADMIN_ROLES[pin] = { role: 'hospital', label: `Hospital Admin (${name})`, color: '#475569', hospitalId: newId };
+              
+              saveCustomHospitals();
+              setActiveSuperHospital(newId);
+              
+              // Ask to set up Map Editor
+              if (window.confirm("Hospital added! Would you like to set up the map layout now to generate QR codes?")) {
+                setMapEditorOpen(true);
+              }
+            }}
+            style={{
+              padding: '10px 12px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
+              border: '2px dashed #cbd5e1', background: 'transparent', color: '#64748b',
+              fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+            }}
+          >
+            + Add New Hospital
+          </button>
         </div>
       )}
 
