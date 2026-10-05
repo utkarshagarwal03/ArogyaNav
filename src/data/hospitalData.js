@@ -337,8 +337,9 @@ try {
     const parsed = JSON.parse(customData);
     if (parsed.hospitals) Object.assign(HOSPITALS, parsed.hospitals);
     if (parsed.roles) {
-      Object.entries(parsed.roles).forEach(([_, r]) => {
+      Object.entries(parsed.roles).forEach(([oldKey, r]) => {
         const key = r.role === 'super' ? 'super' : r.hospitalId;
+        if (!r.pin) r.pin = oldKey; // Restore the PIN from the old key if missing
         ADMIN_ROLES[key] = r;
       });
     }

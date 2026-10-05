@@ -46,8 +46,9 @@ export async function pullAllFromCloud() {
       const data = hospDoc.data();
       if (data.hospitals) Object.assign(HOSPITALS, data.hospitals);
       if (data.roles) {
-        Object.entries(data.roles).forEach(([_, r]) => {
+        Object.entries(data.roles).forEach(([oldKey, r]) => {
           const key = r.role === 'super' ? 'super' : r.hospitalId;
+          if (!r.pin) r.pin = oldKey; // Restore the PIN from the old key if missing
           ADMIN_ROLES[key] = r;
         });
       }
