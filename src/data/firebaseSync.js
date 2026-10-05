@@ -1,6 +1,6 @@
 import { db } from './firebase';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
-import { HOSPITALS, ADMIN_ROLES } from './hospitalData';
+import { HOSPITALS, ADMIN_ROLES, rehydrateCustomLocations } from './hospitalData';
 
 // Push custom hospitals and roles to Firebase
 export async function pushHospitalsToCloud() {
@@ -63,6 +63,9 @@ export async function pullAllFromCloud() {
       const graph = docSnap.data().graph;
       localStorage.setItem('arogyanav_map_graph_v2_' + hid, JSON.stringify(graph));
     });
+    
+    // Now that all maps are saved, rehydrate custom locations for QR scanner
+    rehydrateCustomLocations();
     
     return true; // Successfully synced
   } catch (e) {

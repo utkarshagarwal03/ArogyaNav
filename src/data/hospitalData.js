@@ -325,6 +325,12 @@ export function injectGraphStore(store) {
   }
 }
 
+export function rehydrateCustomLocations() {
+  if (_graphStore) {
+    injectGraphStore(_graphStore);
+  }
+}
+
 // Patch HOSPITALS.H1 now that HOSPITAL_LOCATIONS, DEPARTMENTS, INITIAL_DOCTORS are all declared
 HOSPITALS.H1.locations   = HOSPITAL_LOCATIONS;
 HOSPITALS.H1.departments = DEPARTMENTS;
