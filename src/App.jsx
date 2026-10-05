@@ -84,7 +84,7 @@ function getInitialState() {
   return { screen: 'scan', location: null, destination: null, isAdmin };
 }
 
-import { pullAllFromCloud } from './data/firebaseSync';
+import { pullAllFromCloud, pullDoctorStatusFromCloud, pushDoctorStatusToCloud } from './data/firebaseSync';
 
 export default function App() {
   const [initialState]                 = useState(getInitialState);
@@ -104,7 +104,13 @@ export default function App() {
   const [isCloudSyncing, setIsCloudSyncing] = useState(true);
 
   useEffect(() => {
-    pullAllFromCloud().then((synced) => {
+    Promise.all([
+      pullAllFromCloud(),
+      pullDoctorStatusFromCloud('H1'),
+      pullDoctorStatusFromCloud('H2')
+    ]).then(([synced, h1Docs, h2Docs]) => {
+      if (h1Docs) setDoctors(h1Docs);
+      if (h2Docs) setH2Doctors(h2Docs);
       if (synced) {
         // Re-calculate initial state now that cloud data is loaded
         const state = getInitialState();
@@ -150,9 +156,17 @@ export default function App() {
   // Update doctor status — routes to correct hospital's state
   function handleUpdateDoctorStatus(docId, status, hospitalId) {
     if (hospitalId === 'H2') {
-      setH2Doctors(prev => prev.map(doc => doc.id === docId ? { ...doc, status } : doc));
+      setH2Doctors(prev => {
+        const next = prev.map(doc => doc.id === docId ? { ...doc, status } : doc);
+        pushDoctorStatusToCloud('H2', next);
+        return next;
+      });
     } else {
-      setDoctors(prev => prev.map(doc => doc.id === docId ? { ...doc, status } : doc));
+      setDoctors(prev => {
+        const next = prev.map(doc => doc.id === docId ? { ...doc, status } : doc);
+        pushDoctorStatusToCloud('H1', next);
+        return next;
+      });
     }
   }
 

@@ -74,3 +74,24 @@ export async function pullAllFromCloud() {
   }
 }
 
+export async function pushDoctorStatusToCloud(hid, doctors) {
+  if (!db) return;
+  try {
+    await setDoc(doc(db, 'doctors', hid), { doctors });
+  } catch (e) {
+    console.error('Error pushing doctor status', e);
+  }
+}
+
+export async function pullDoctorStatusFromCloud(hid) {
+  if (!db) return null;
+  try {
+    const docSnap = await getDoc(doc(db, 'doctors', hid));
+    if (docSnap.exists()) return docSnap.data().doctors;
+    return null;
+  } catch (e) {
+    console.error('Error pulling doctor status', e);
+    return null;
+  }
+}
+

@@ -26,10 +26,9 @@ export default function DestinationView({ hospitalId = 'H1', currentLocation, on
     );
   }, [query, departments, doctors]);
 
-  // Compute doctor availability count per department
-  function getDocBadge(deptId) {
-    const deptDocs = doctors.filter(doc => doc.deptId === deptId);
-    if (deptDocs.length === 0) return null;
+  // Compute doctor availability count per department (or matched doctors)
+  function getDocBadge(deptDocs) {
+    if (!deptDocs || deptDocs.length === 0) return null;
 
     const availableCount = deptDocs.filter(doc => doc.status === 'available').length;
     const inSurgeryCount = deptDocs.filter(doc => doc.status === 'in_surgery').length;
@@ -177,7 +176,7 @@ export default function DestinationView({ hospitalId = 'H1', currentLocation, on
                           })}
                         </div>
                       )}
-                      {getDocBadge(dept.id)}
+                      {getDocBadge(matchedDocs.length > 0 ? matchedDocs : deptDoctors)}
                     </div>
                     <span className="dept-floor">{dept.floor}</span>
                     <ChevronRight size={18} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />

@@ -226,6 +226,29 @@ export function loadGraph(hid = 'H1') {
     console.warn('ArogyaNav: Could not load map graph from localStorage', e);
   }
   if (hid === 'H1') return buildDefaultGraph();
+  if (hid === 'H2') {
+    const h2Graph = buildDefaultGraph();
+    // Prefix all nodes with H2- so they match H2_LOCATIONS
+    Object.keys(h2Graph.floors).forEach(f => {
+      const newNodes = {};
+      Object.keys(h2Graph.floors[f].nodes).forEach(nid => {
+        const n = h2Graph.floors[f].nodes[nid];
+        const newId = nid.startsWith('LOC') || nid.startsWith('ELEV') || nid.startsWith('STAIRS') ? `H2-${nid}` : nid;
+        newNodes[newId] = { ...n, id: newId, qrCode: n.qrCode ? `H2-${n.qrCode}` : '' };
+      });
+      h2Graph.floors[f].nodes = newNodes;
+      
+      h2Graph.floors[f].edges.forEach(e => {
+        e.from = e.from.startsWith('LOC') || e.from.startsWith('ELEV') || e.from.startsWith('STAIRS') ? `H2-${e.from}` : e.from;
+        e.to = e.to.startsWith('LOC') || e.to.startsWith('ELEV') || e.to.startsWith('STAIRS') ? `H2-${e.to}` : e.to;
+      });
+    });
+    h2Graph.crossFloorEdges.forEach(e => {
+      e.fromNode = e.fromNode.startsWith('LOC') || e.fromNode.startsWith('ELEV') || e.fromNode.startsWith('STAIRS') ? `H2-${e.fromNode}` : e.fromNode;
+      e.toNode = e.toNode.startsWith('LOC') || e.toNode.startsWith('ELEV') || e.toNode.startsWith('STAIRS') ? `H2-${e.toNode}` : e.toNode;
+    });
+    return h2Graph;
+  }
   
   const empty = buildDefaultGraph();
   Object.keys(empty.floors).forEach(f => {
