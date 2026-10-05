@@ -386,40 +386,94 @@ export function generateRouteFromGraph(hospitalId = 'H1', fromLocation, toDept) 
   const steps = [];
   const { path, totalDistance } = result;
 
-  for (let i = 0; i < path.length; i++) {
-    const [floorKey, nodeId] = path[i].split('::');
-    const floorData = graph.floors[floorKey];
-    const node      = floorData?.nodes?.[nodeId];
-    const nodeName  = node?.name || nodeId;
+  if (path.length > 0) {
+    const [startFloor, startNodeStr] = path[0].split('::');
+    const startNode = graph.floors[startFloor]?.nodes?.[startNodeStr];
+    const startName = startNode?.name || startNodeStr;
+    steps.push({
+      instruction: `Start at ${startName} (${FLOOR_LABELS[startFloor] || startFloor})`,
+      direction: 'straight',
+      distance: '0m'
+    });
+  }
 
-    if (i === 0) {
-      steps.push({ instruction: `Start at ${nodeName} (${FLOOR_LABELS[floorKey]})`, direction: 'straight', distance: '0m' });
-      continue;
-    }
-
-    const prevPath      = path[i - 1];
-    const [prevFloor]   = prevPath.split('::');
-    const floorChanged  = prevFloor !== floorKey;
-
-    if (floorChanged) {
-      const isElevator = nodeId.startsWith('ELEV');
+  for (let i = 1; i < path.length; i++) {
+    const prevKey = path[i - 1];
+    const currKey = path[i];
+    
+    const [prevFloor, prevNodeId] = prevKey.split('::');
+    const [currFloor, currNodeId] = currKey.split('::');
+    
+    const currNode = graph.floors[currFloor]?.nodes?.[currNodeId];
+    const currName = currNode?.name || currNodeId;
+    
+    // Check if floor changed
+    if (prevFloor !== currFloor) {
+      const isElevator = currNodeId.startsWith('ELEV') || prevNodeId.startsWith('ELEV');
       const modeLabel  = isElevator ? 'elevator' : 'staircase';
       steps.push({
-        instruction: `Take ${modeLabel} to ${FLOOR_LABELS[floorKey]}`,
+        instruction: `Take ${modeLabel} to ${FLOOR_LABELS[currFloor] || currFloor}`,
         direction: 'straight',
         distance: '0m',
       });
-    } else if (i === path.length - 1) {
-      steps.push({ instruction: `You have arrived at ${nodeName}`, direction: 'arrived', distance: '0m' });
-    } else {
-      const [nextFloor, nextNodeId] = path[i + 1].split('::');
-      const nextNode = graph.floors[nextFloor]?.nodes?.[nextNodeId];
-      steps.push({
-        instruction: `Proceed towards ${nextNode?.name || nextNodeId}`,
-        direction: 'straight',
-        distance: `~${calcSegDistance(graph, floorKey, nodeId, path[i + 1])}m`,
-      });
+      continue;
     }
+    
+    // Normal walking on same floor
+    const dist = calcSegDistance(graph, prevFloor, prevNodeId, currKey);
+    let dir = 'straight';
+    let action = 'Head towards';
+    
+    if (i > 1) {
+      const prevPrevKey = path[i - 2];
+      const [prevPrevFloor, prevPrevNodeId] = prevPrevKey.split('::');
+      
+      if (prevPrevFloor === prevFloor && prevFloor === currFloor) {
+        const p1 = graph.floors[prevFloor]?.nodes?.[prevPrevNodeId];
+        const p2 = graph.floors[prevFloor]?.nodes?.[prevNodeId];
+        const p3 = currNode;
+        
+        if (p1 && p2 && p3 && p1.x !== undefined && p2.x !== undefined && p3.x !== undefined) {
+          const dx1 = p2.x - p1.x;
+          const dy1 = p2.y - p1.y;
+          const dx2 = p3.x - p2.x;
+          const dy2 = p3.y - p2.y;
+          
+          const cross = dx1 * dy2 - dy1 * dx2;
+          const dot = dx1 * dx2 + dy1 * dy2;
+          const angle = Math.atan2(cross, dot);
+          
+          if (angle > 0.35) {
+            dir = 'right';
+            action = 'Turn right and head towards';
+          } else if (angle < -0.35) {
+            dir = 'left';
+            action = 'Turn left and head towards';
+          } else {
+            dir = 'straight';
+            action = 'Continue straight towards';
+          }
+        }
+      }
+    }
+    
+    steps.push({
+      instruction: `${action} ${currName}`,
+      direction: dir,
+      distance: `~${dist}m`,
+    });
+  }
+  
+  if (path.length > 1) {
+    const lastKey = path[path.length - 1];
+    const [lastFloor, lastNodeId] = lastKey.split('::');
+    const lastNode = graph.floors[lastFloor]?.nodes?.[lastNodeId];
+    const lastName = lastNode?.name || lastNodeId;
+    steps.push({
+      instruction: `You have arrived at ${lastName}`,
+      direction: 'arrived',
+      distance: '0m'
+    });
   }
 
   const estimatedTime = totalDistance < 60  ? '1-2 min'
