@@ -1,10 +1,15 @@
 import { useRef, useEffect, useState } from 'react';
-import { HOSPITAL_LOCATIONS, H2_LOCATIONS } from '../data/hospitalData';
+import { HOSPITALS } from '../data/hospitalData';
 import { Camera, CheckCircle, AlertCircle, Info, QrCode } from 'lucide-react';
 
 // Unified lookup across all hospitals
-const ALL_LOCATIONS = { ...HOSPITAL_LOCATIONS, ...H2_LOCATIONS };
-
+function getAllLocations() {
+  const locs = {};
+  Object.values(HOSPITALS).forEach(h => {
+    if (h.locations) Object.assign(locs, h.locations);
+  });
+  return locs;
+}
 
 export default function QrScannerView({ onLocationScanned }) {
   const [feedback, setFeedback]       = useState(null);
@@ -103,7 +108,8 @@ export default function QrScannerView({ onLocationScanned }) {
       }
     }
 
-    const location = ALL_LOCATIONS[locId];
+    const allLocs = getAllLocations();
+    const location = allLocs[locId];
     if (location) {
       setFeedback({ type: 'success', message: `📍 Detected: ${location.name}` });
       // Wait briefly so user can see the success state, then navigate

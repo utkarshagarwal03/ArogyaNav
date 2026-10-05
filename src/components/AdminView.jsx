@@ -257,25 +257,49 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
             const acc = HOSPITAL_ACCENTS[hid] || { color: '#0f172a', bg: '#0f172a', light: '#f8fafc', border: '#cbd5e1' };
             const active = activeSuperHospital === hid;
             return (
-              <button
-                key={hid}
-                type="button"
-                onClick={() => setActiveSuperHospital(hid)}
-                style={{
-                  flex: 1, padding: '10px 12px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-                  border: active ? `2px solid ${acc.color}` : '2px solid #e2e8f0',
-                  background: active ? acc.light : '#f8fafc',
-                  color: active ? acc.color : '#64748b',
-                  transition: 'all 0.15s',
-                  display: 'flex', alignItems: 'center', gap: 10,
-                }}
-              >
-                <span style={{ fontSize: '1.2rem' }}>🏥</span>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>{h.info.name}</div>
-                  <div style={{ fontSize: '0.68rem', opacity: 0.8 }}>{h.info.campus}</div>
-                </div>
-              </button>
+              <div key={hid} style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveSuperHospital(hid)}
+                  style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                    border: active ? `2px solid ${acc.color}` : '2px solid #e2e8f0',
+                    background: active ? acc.light : '#f8fafc',
+                    color: active ? acc.color : '#64748b',
+                    transition: 'all 0.15s',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                  }}
+                >
+                  <span style={{ fontSize: '1.2rem' }}>🏥</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>{h.info.name}</div>
+                    <div style={{ fontSize: '0.68rem', opacity: 0.8 }}>{h.info.campus}</div>
+                  </div>
+                </button>
+                {hid !== 'H1' && hid !== 'H2' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Are you sure you want to remove ${h.info.name}? This action cannot be undone.`)) {
+                        delete HOSPITALS[hid];
+                        delete ADMIN_ROLES[hid];
+                        saveCustomHospitals();
+                        pushHospitalsToCloud();
+                        if (activeSuperHospital === hid) setActiveSuperHospital('H1');
+                      }
+                    }}
+                    style={{
+                      padding: '0 12px', borderRadius: 12, cursor: 'pointer',
+                      border: '2px solid #fee2e2', background: '#fef2f2', color: '#ef4444',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                    title="Remove Hospital"
+                  >
+                    🗑️
+                  </button>
+                )}
+              </div>
             );
           })}
           <button

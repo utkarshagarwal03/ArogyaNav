@@ -45,7 +45,12 @@ export async function pullAllFromCloud() {
     if (hospDoc.exists()) {
       const data = hospDoc.data();
       if (data.hospitals) Object.assign(HOSPITALS, data.hospitals);
-      if (data.roles) Object.assign(ADMIN_ROLES, data.roles);
+      if (data.roles) {
+        Object.entries(data.roles).forEach(([_, r]) => {
+          const key = r.role === 'super' ? 'super' : r.hospitalId;
+          ADMIN_ROLES[key] = r;
+        });
+      }
       // Sync back to local storage for immediate access next time
       localStorage.setItem('arogyanav_custom_hospitals', JSON.stringify(data));
     }

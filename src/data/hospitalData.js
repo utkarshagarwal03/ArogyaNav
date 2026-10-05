@@ -336,7 +336,12 @@ try {
   if (customData) {
     const parsed = JSON.parse(customData);
     if (parsed.hospitals) Object.assign(HOSPITALS, parsed.hospitals);
-    if (parsed.roles) Object.assign(ADMIN_ROLES, parsed.roles);
+    if (parsed.roles) {
+      Object.entries(parsed.roles).forEach(([_, r]) => {
+        const key = r.role === 'super' ? 'super' : r.hospitalId;
+        ADMIN_ROLES[key] = r;
+      });
+    }
   }
 } catch (e) {
   console.warn('Could not load custom hospitals', e);
