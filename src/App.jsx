@@ -127,15 +127,10 @@ export default function App() {
 
   function handlePinSubmit(e) {
     e.preventDefault();
-    const expectedPin = Object.keys(ADMIN_ROLES).find(pin => {
-      if (selectedRole === 'super') return ADMIN_ROLES[pin].role === 'super';
-      return ADMIN_ROLES[pin].hospitalId === selectedRole;
-    });
-    
-    if (pinInput === expectedPin) {
-      const matched = ADMIN_ROLES[pinInput];
-      setAdminRole(matched.role);
-      setAdminHospitalId(matched.hospitalId);
+    const roleData = ADMIN_ROLES[selectedRole];
+    if (roleData && pinInput === roleData.pin) {
+      setAdminRole(roleData.role);
+      setAdminHospitalId(roleData.hospitalId);
       setShowPinModal(false);
       setScreen('admin');
       setPinError(false);
@@ -323,10 +318,10 @@ export default function App() {
 
             {/* Role selector — dynamic vertical list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '220px', overflowY: 'auto', paddingRight: 4 }}>
-              {Object.keys(ADMIN_ROLES).map(pin => {
-                const r = ADMIN_ROLES[pin];
+              {Object.keys(ADMIN_ROLES).map(roleId => {
+                const r = ADMIN_ROLES[roleId];
                 const isSuper = r.role === 'super';
-                const rId = isSuper ? 'super' : r.hospitalId;
+                const rId = roleId;
                 const icon = isSuper ? '🛡️' : '🏥';
                 const desc = isSuper ? 'All Hospitals · Map & QR' : (HOSPITALS[r.hospitalId]?.info?.campus || 'New Hospital');
                 
@@ -363,9 +358,8 @@ export default function App() {
                 autoFocus
                 onChange={e => { setPinInput(e.target.value); setPinError(false); }}
                 placeholder={
-                  selectedRole === 'super'   ? 'Enter Super Admin PIN'        :
-                  selectedRole === 'h1admin' ? 'Enter Manipal Admin PIN'      :
-                                              'Enter Apollo Admin PIN'
+                  selectedRole === 'super' ? 'Enter Super Admin PIN' :
+                  `Enter PIN for ${HOSPITALS[selectedRole]?.info?.campus || 'Hospital'}`
                 }
                 style={{
                   padding: '12px 16px', fontSize: '1.2rem', textAlign: 'center',

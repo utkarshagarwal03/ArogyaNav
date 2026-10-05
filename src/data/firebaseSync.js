@@ -12,10 +12,10 @@ export async function pushHospitalsToCloud() {
     if (hid !== 'H1' && hid !== 'H2') customHospitals[hid] = HOSPITALS[hid];
   });
   
-  Object.keys(ADMIN_ROLES).forEach(pin => {
-    const r = ADMIN_ROLES[pin];
+  Object.keys(ADMIN_ROLES).forEach(roleId => {
+    const r = ADMIN_ROLES[roleId];
     if (r.hospitalId !== 'H1' && r.hospitalId !== 'H2' && r.role !== 'super') {
-      customRoles[pin] = r;
+      customRoles[roleId] = r;
     }
   });
 

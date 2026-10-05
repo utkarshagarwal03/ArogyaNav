@@ -208,9 +208,9 @@ export const HOSPITALS = {
 };
 
 export const ADMIN_ROLES = {
-  '1234': { role: 'super',     label: 'Super Admin',              color: '#0f172a', hospitalId: null },
-  '5678': { role: 'hospital',  label: 'Hospital Admin (Manipal)', color: '#0077B6', hospitalId: 'H1' },
-  '9012': { role: 'hospital',  label: 'Hospital Admin (Apollo)',  color: '#059173', hospitalId: 'H2' },
+  'super': { pin: '1234', role: 'super',     label: 'Super Admin',              color: '#0f172a', hospitalId: null },
+  'H1':    { pin: '5678', role: 'hospital',  label: 'Hospital Admin (Manipal)', color: '#0077B6', hospitalId: 'H1' },
+  'H2':    { pin: '9012', role: 'hospital',  label: 'Hospital Admin (Apollo)',  color: '#059173', hospitalId: 'H2' },
 };
 
 export function generateRoute(hospitalId = 'H1', fromLocation, toDept) {
@@ -349,10 +349,10 @@ export function saveCustomHospitals() {
   Object.keys(HOSPITALS).forEach(hid => {
     if (hid !== 'H1' && hid !== 'H2') customHospitals[hid] = HOSPITALS[hid];
   });
-  Object.keys(ADMIN_ROLES).forEach(pin => {
-    const r = ADMIN_ROLES[pin];
+  Object.keys(ADMIN_ROLES).forEach(roleId => {
+    const r = ADMIN_ROLES[roleId];
     if (r.hospitalId !== 'H1' && r.hospitalId !== 'H2' && r.role !== 'super') {
-      customRoles[pin] = r;
+      customRoles[roleId] = r;
     }
   });
   localStorage.setItem('arogyanav_custom_hospitals', JSON.stringify({ hospitals: customHospitals, roles: customRoles }));

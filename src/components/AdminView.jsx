@@ -299,7 +299,7 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
               HOSPITAL_ACCENTS[newId] = { color: '#475569', bg: '#475569', light: '#f1f5f9', border: '#94a3b8' };
               
               // Add to ADMIN_ROLES
-              ADMIN_ROLES[pin] = { role: 'hospital', label: `Hospital Admin (${name})`, color: '#475569', hospitalId: newId };
+              ADMIN_ROLES[newId] = { pin, role: 'hospital', label: `Hospital Admin (${name})`, color: '#475569', hospitalId: newId };
               
               saveCustomHospitals();
               pushHospitalsToCloud();
