@@ -11,6 +11,34 @@ import {
   HOSPITAL2_INFO, H2_INITIAL_DOCTORS, H2_LOCATIONS, H2_DEPARTMENTS, HOSPITALS, ADMIN_ROLES,
 } from './data/hospitalData';
 import * as mapGraphStore from './data/mapGraphStore';
+
+// Build a synthetic departments list from a custom hospital's map graph nodes.
+// Nodes typed 'department' become selectable destinations; all others (checkpoint,
+// entrance, elevator, stairs) are included too so nothing is hidden.
+function buildDeptsFromGraph(hid) {
+  const graph = mapGraphStore.loadGraph(hid);
+  const depts = [];
+  Object.values(graph.floors || {}).forEach(floor => {
+    Object.values(floor.nodes || {}).forEach(node => {
+      // Skip pure routing nodes with no name
+      if (!node.name || node.type === 'junction') return;
+      depts.push({
+        id:          node.id,
+        name:        node.name,
+        shortName:   node.name,
+        floor:       floor.label || 'Ground Floor',
+        wing:        '',
+        icon:        node.type === 'department' ? '🏥'
+                   : node.type === 'elevator'   ? '🛗'
+                   : node.type === 'stairs'     ? '🪜'
+                   : node.type === 'entrance'   ? '🚪' : '📍',
+        color:       '#e6f0ff',
+        description: `${floor.label || 'Ground Floor'} · ${node.type}`,
+      });
+    });
+  });
+  return depts;
+}
 import { QrCode, MapPin, Navigation, Check, ExternalLink, ShieldAlert } from 'lucide-react';
 
 // Inject Dijkstra graph store into hospitalData so generateRoute uses it
@@ -284,8 +312,14 @@ export default function App() {
             const foundHid = Object.keys(HOSPITALS).find(id => HOSPITALS[id]?.locations?.[currentLocation.id]);
             if (foundHid) activeHid = foundHid;
           }
-          const activeDepts = HOSPITALS[activeHid]?.departments || [];
-          const activeDoctors = activeHid === 'H2' ? h2Doctors : (activeHid === 'H1' ? doctors : []);
+          const activeDepts =
+            HOSPITALS[activeHid]?.departments?.length
+              ? HOSPITALS[activeHid].departments
+              : buildDeptsFromGraph(activeHid);
+          const activeDoctors =
+            activeHid === 'H1' ? doctors
+            : activeHid === 'H2' ? h2Doctors
+            : (customDoctors[activeHid] || HOSPITALS[activeHid]?.doctors || []);
           return (
             <DestinationView
               hospitalId={activeHid}
