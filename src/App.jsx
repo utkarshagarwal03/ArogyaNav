@@ -93,6 +93,8 @@ export default function App() {
   const [destination, setDestination]  = useState(initialState.destination);
   const [doctors, setDoctors]          = useState(INITIAL_DOCTORS);
   const [h2Doctors, setH2Doctors]      = useState(H2_INITIAL_DOCTORS);
+  // Custom hospitals (H3, H4, …) — keyed by hospitalId
+  const [customDoctors, setCustomDoctors] = useState({});
 
   // Admin auth state
   const [adminRole, setAdminRole]         = useState(null);   // null | 'super' | 'hospital'
@@ -104,15 +106,28 @@ export default function App() {
   const [isCloudSyncing, setIsCloudSyncing] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      pullAllFromCloud(),
-      pullDoctorStatusFromCloud('H1'),
-      pullDoctorStatusFromCloud('H2')
-    ]).then(([synced, h1Docs, h2Docs]) => {
-      if (h1Docs) setDoctors(h1Docs);
-      if (h2Docs) setH2Doctors(h2Docs);
+    pullAllFromCloud().then(synced => {
+      // Pull H1 and H2 doctors
+      Promise.all([
+        pullDoctorStatusFromCloud('H1'),
+        pullDoctorStatusFromCloud('H2'),
+      ]).then(([h1Docs, h2Docs]) => {
+        if (h1Docs) setDoctors(h1Docs);
+        if (h2Docs) setH2Doctors(h2Docs);
+      });
+
+      // Pull doctors for every custom hospital (anything beyond H1/H2)
+      const customHids = Object.keys(HOSPITALS).filter(hid => hid !== 'H1' && hid !== 'H2');
+      if (customHids.length > 0) {
+        Promise.all(customHids.map(hid => pullDoctorStatusFromCloud(hid).then(docs => ({ hid, docs }))))
+          .then(results => {
+            const map = {};
+            results.forEach(({ hid, docs }) => { if (docs) map[hid] = docs; });
+            if (Object.keys(map).length > 0) setCustomDoctors(prev => ({ ...prev, ...map }));
+          });
+      }
+
       if (synced) {
-        // Re-calculate initial state now that cloud data is loaded
         const state = getInitialState();
         setScreen(state.screen);
         setLocation(state.location);
@@ -155,17 +170,25 @@ export default function App() {
 
   // Update doctor status — routes to correct hospital's state
   function handleUpdateDoctorStatus(docId, status, hospitalId) {
-    if (hospitalId === 'H2') {
+    if (hospitalId === 'H1') {
+      setDoctors(prev => {
+        const next = prev.map(doc => doc.id === docId ? { ...doc, status } : doc);
+        pushDoctorStatusToCloud('H1', next);
+        return next;
+      });
+    } else if (hospitalId === 'H2') {
       setH2Doctors(prev => {
         const next = prev.map(doc => doc.id === docId ? { ...doc, status } : doc);
         pushDoctorStatusToCloud('H2', next);
         return next;
       });
     } else {
-      setDoctors(prev => {
-        const next = prev.map(doc => doc.id === docId ? { ...doc, status } : doc);
-        pushDoctorStatusToCloud('H1', next);
-        return next;
+      // Custom hospital (H3, H4, …)
+      setCustomDoctors(prev => {
+        const current = prev[hospitalId] || HOSPITALS[hospitalId]?.doctors || [];
+        const next = current.map(doc => doc.id === docId ? { ...doc, status } : doc);
+        pushDoctorStatusToCloud(hospitalId, next);
+        return { ...prev, [hospitalId]: next };
       });
     }
   }
@@ -287,6 +310,7 @@ export default function App() {
             adminHospitalId={adminHospitalId}
             doctors={doctors}
             h2Doctors={h2Doctors}
+            customDoctors={customDoctors}
             onUpdateDoctorStatus={handleUpdateDoctorStatus}
             onBackToApp={() => { 
               setAdminRole(null); 
@@ -301,7 +325,7 @@ export default function App() {
         )}
       </main>
 
-      <AiChatbot currentLocation={currentLocation} onSelectDestination={handleAiDestinationSelect} doctors={[...doctors, ...h2Doctors]} />
+      <AiChatbot currentLocation={currentLocation} onSelectDestination={handleAiDestinationSelect} doctors={[...doctors, ...h2Doctors, ...Object.values(customDoctors).flat()]} />
 
       {/* Admin Login Modal */}
       {showPinModal && (

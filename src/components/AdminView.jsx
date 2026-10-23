@@ -165,7 +165,7 @@ function DoctorPanel({ doctors, departments, hospitalId, onUpdateDoctorStatus })
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function AdminView({ adminRole = 'super', adminHospitalId, doctors, h2Doctors, onUpdateDoctorStatus, onBackToApp }) {
+export default function AdminView({ adminRole = 'super', adminHospitalId, doctors, h2Doctors, customDoctors = {}, onUpdateDoctorStatus, onBackToApp }) {
   const cfg = ROLE_CONFIG[adminRole] || ROLE_CONFIG.super;
 
   const isSuperAdmin    = adminRole === 'super';
@@ -185,7 +185,9 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
   const hospitalData    = HOSPITALS[viewingHospitalId] || HOSPITALS.H1;
   const hospitalInfo    = hospitalData.info;
   const hospitalDepts   = hospitalData.departments || [];
-  const hospitalDoctors = viewingHospitalId === 'H1' ? doctors : h2Doctors;
+  const hospitalDoctors = viewingHospitalId === 'H1' ? doctors
+    : viewingHospitalId === 'H2' ? h2Doctors
+    : (customDoctors[viewingHospitalId] || HOSPITALS[viewingHospitalId]?.doctors || []);
   let hospitalLocs = viewingHospitalId === 'H1' ? HOSPITAL_LOCATIONS : (hospitalData.locations || {});
   
   // If it's a new custom hospital, dynamically pull nodes from the map graph
