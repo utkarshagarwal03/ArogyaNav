@@ -306,11 +306,28 @@ export default function App() {
         {screen === 'scan'     && !showPinModal && <QrScannerView onLocationScanned={handleLocationScanned} />}
         {screen === 'scan'     && showPinModal  && <div style={{ flex: 1, background: '#f8fafc' }} />}
         {screen === 'select'   && (() => {
-          // Determine which hospital this location belongs to
+          // Determine which hospital this location belongs to.
+          // First try the HOSPITALS registry (populated from Firestore + rehydration).
+          // Fallback: scan every custom hospital's saved map graph for the node id.
           let activeHid = 'H1';
           if (currentLocation) {
             const foundHid = Object.keys(HOSPITALS).find(id => HOSPITALS[id]?.locations?.[currentLocation.id]);
-            if (foundHid) activeHid = foundHid;
+            if (foundHid) {
+              activeHid = foundHid;
+            } else {
+              // Fallback: check map graphs for custom hospitals
+              const customHid = Object.keys(HOSPITALS)
+                .filter(id => id !== 'H1' && id !== 'H2')
+                .find(id => {
+                  const graph = mapGraphStore.loadGraph(id);
+                  return Object.values(graph.floors || {}).some(floor =>
+                    Object.values(floor.nodes || {}).some(
+                      n => n.id === currentLocation.id || n.qrCode === currentLocation.id
+                    )
+                  );
+                });
+              if (customHid) activeHid = customHid;
+            }
           }
           const activeDepts =
             HOSPITALS[activeHid]?.departments?.length
@@ -334,7 +351,21 @@ export default function App() {
           let activeHid = 'H1';
           if (currentLocation) {
             const foundHid = Object.keys(HOSPITALS).find(id => HOSPITALS[id]?.locations?.[currentLocation.id]);
-            if (foundHid) activeHid = foundHid;
+            if (foundHid) {
+              activeHid = foundHid;
+            } else {
+              const customHid = Object.keys(HOSPITALS)
+                .filter(id => id !== 'H1' && id !== 'H2')
+                .find(id => {
+                  const graph = mapGraphStore.loadGraph(id);
+                  return Object.values(graph.floors || {}).some(floor =>
+                    Object.values(floor.nodes || {}).some(
+                      n => n.id === currentLocation.id || n.qrCode === currentLocation.id
+                    )
+                  );
+                });
+              if (customHid) activeHid = customHid;
+            }
           }
           return <NavigationView hospitalId={activeHid} currentLocation={currentLocation} destination={destination} onScanAgain={handleScanAgain} />;
         })()}
