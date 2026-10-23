@@ -274,6 +274,31 @@ export function resetGraph() {
   return buildDefaultGraph();
 }
 
+// ─── Extract departments / destinations from map graph nodes ──────────────────
+export function buildDeptsFromGraph(hid) {
+  const graph = loadGraph(hid);
+  const depts = [];
+  Object.values(graph.floors || {}).forEach(floor => {
+    Object.values(floor.nodes || {}).forEach(node => {
+      if (!node.name || node.type === 'junction') return;
+      depts.push({
+        id:          node.id,
+        name:        node.name,
+        shortName:   node.name,
+        floor:       floor.label || 'Ground Floor',
+        wing:        '',
+        icon:        node.type === 'department' ? '🏥'
+                   : node.type === 'elevator'   ? '🛗'
+                   : node.type === 'stairs'     ? '🪜'
+                   : node.type === 'entrance'   ? '🚪' : '📍',
+        color:       '#e6f0ff',
+        description: `${floor.label || 'Ground Floor'} · ${node.type}`,
+      });
+    });
+  });
+  return depts;
+}
+
 // ─── Floor key from floor label string ───────────────────────────────────────
 export function floorKeyFromLabel(floorStr) {
   if (!floorStr) return 'GF';

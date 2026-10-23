@@ -18,11 +18,12 @@ export default function DestinationView({ hospitalId = 'H1', currentLocation, on
     );
 
     return departments.filter(d =>
-      d.name.toLowerCase().includes(q) ||
-      d.description.toLowerCase().includes(q) ||
-      d.floor.toLowerCase().includes(q) ||
-      d.shortName.toLowerCase().includes(q) ||
-      deptIdsWithMatchingDoctor.has(d.id)
+      d.name?.toLowerCase().includes(q) ||
+      d.description?.toLowerCase().includes(q) ||
+      d.floor?.toLowerCase().includes(q) ||
+      d.shortName?.toLowerCase().includes(q) ||
+      deptIdsWithMatchingDoctor.has(d.id) ||
+      (d.shortName && deptIdsWithMatchingDoctor.has(d.shortName))
     );
   }, [query, departments, doctors]);
 
@@ -132,7 +133,7 @@ export default function DestinationView({ hospitalId = 'H1', currentLocation, on
               </div>
             ) : (
               filtered.map(dept => {
-                const deptDoctors = doctors.filter(d => d.deptId === dept.id);
+                const deptDoctors = doctors.filter(d => d.deptId === dept.id || (dept.shortName && d.deptId === dept.shortName));
                 // Highlight matched doctor names when searching
                 const matchedDocs = query.trim()
                   ? deptDoctors.filter(d =>

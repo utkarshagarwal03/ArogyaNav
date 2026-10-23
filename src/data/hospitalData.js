@@ -331,6 +331,23 @@ export function rehydrateCustomLocations() {
   }
 }
 
+// ── Resolve effective departments (configured + map graph nodes) ─────────────
+export function getEffectiveDepartments(hid = 'H1') {
+  const configured = HOSPITALS[hid]?.departments || [];
+  if (hid === 'H1' || hid === 'H2') return configured;
+
+  const store = _getGraphStore();
+  const fromGraph = (store && store.buildDeptsFromGraph) ? store.buildDeptsFromGraph(hid) : [];
+
+  const combined = [...configured];
+  fromGraph.forEach(item => {
+    if (!combined.some(c => c.id === item.id || c.name?.toLowerCase() === item.name?.toLowerCase())) {
+      combined.push(item);
+    }
+  });
+  return combined;
+}
+
 // Patch HOSPITALS.H1 now that HOSPITAL_LOCATIONS, DEPARTMENTS, INITIAL_DOCTORS are all declared
 HOSPITALS.H1.locations   = HOSPITAL_LOCATIONS;
 HOSPITALS.H1.departments = DEPARTMENTS;

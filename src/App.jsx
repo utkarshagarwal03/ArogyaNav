@@ -9,6 +9,7 @@ import {
   HOSPITAL_LOCATIONS, DEPARTMENTS, HOSPITAL_INFO,
   INITIAL_DOCTORS, injectGraphStore,
   HOSPITAL2_INFO, H2_INITIAL_DOCTORS, H2_LOCATIONS, H2_DEPARTMENTS, HOSPITALS, ADMIN_ROLES,
+  saveCustomHospitals, getEffectiveDepartments,
 } from './data/hospitalData';
 import * as mapGraphStore from './data/mapGraphStore';
 
@@ -112,7 +113,7 @@ function getInitialState() {
   return { screen: 'scan', location: null, destination: null, isAdmin };
 }
 
-import { pullAllFromCloud, pullDoctorStatusFromCloud, pushDoctorStatusToCloud } from './data/firebaseSync';
+import { pullAllFromCloud, pullDoctorStatusFromCloud, pushDoctorStatusToCloud, pushHospitalsToCloud } from './data/firebaseSync';
 
 export default function App() {
   const [initialState]                 = useState(getInitialState);
@@ -123,6 +124,8 @@ export default function App() {
   const [h2Doctors, setH2Doctors]      = useState(H2_INITIAL_DOCTORS);
   // Custom hospitals (H3, H4, …) — keyed by hospitalId
   const [customDoctors, setCustomDoctors] = useState({});
+  const [, setDataVersion] = useState(0);
+  const refreshData = () => setDataVersion(v => v + 1);
 
   // Admin auth state
   const [adminRole, setAdminRole]         = useState(null);   // null | 'super' | 'hospital'
@@ -150,7 +153,18 @@ export default function App() {
         Promise.all(customHids.map(hid => pullDoctorStatusFromCloud(hid).then(docs => ({ hid, docs }))))
           .then(results => {
             const map = {};
-            results.forEach(({ hid, docs }) => { if (docs) map[hid] = docs; });
+            results.forEach(({ hid, docs }) => {
+              const list = (docs && docs.length > 0) ? docs : (HOSPITALS[hid]?.doctors || []);
+              // Deduplicate on startup by id or name+dept
+              const seen = new Set();
+              map[hid] = list.filter(d => {
+                const k = d.id || `${d.name?.toLowerCase().trim()}_${d.deptId}`;
+                if (seen.has(k)) return false;
+                seen.add(k);
+                return true;
+              });
+              if (HOSPITALS[hid]) HOSPITALS[hid].doctors = map[hid];
+            });
             if (Object.keys(map).length > 0) setCustomDoctors(prev => ({ ...prev, ...map }));
           });
       }
@@ -216,8 +230,110 @@ export default function App() {
         const current = prev[hospitalId] || HOSPITALS[hospitalId]?.doctors || [];
         const next = current.map(doc => doc.id === docId ? { ...doc, status } : doc);
         pushDoctorStatusToCloud(hospitalId, next);
+        if (HOSPITALS[hospitalId]) {
+          HOSPITALS[hospitalId].doctors = next;
+          saveCustomHospitals();
+          pushHospitalsToCloud();
+        }
         return { ...prev, [hospitalId]: next };
       });
+    }
+  }
+
+  // Add new doctor to a hospital (persisted to Firestore)
+  function handleAddDoctor(hospitalId, newDoctor) {
+    if (hospitalId === 'H1') {
+      setDoctors(prev => {
+        if (prev.some(d => d.id === newDoctor.id || (d.name?.toLowerCase().trim() === newDoctor.name?.toLowerCase().trim() && d.deptId === newDoctor.deptId))) {
+          return prev;
+        }
+        const next = [...prev, newDoctor];
+        pushDoctorStatusToCloud('H1', next);
+        return next;
+      });
+    } else if (hospitalId === 'H2') {
+      setH2Doctors(prev => {
+        if (prev.some(d => d.id === newDoctor.id || (d.name?.toLowerCase().trim() === newDoctor.name?.toLowerCase().trim() && d.deptId === newDoctor.deptId))) {
+          return prev;
+        }
+        const next = [...prev, newDoctor];
+        pushDoctorStatusToCloud('H2', next);
+        return next;
+      });
+    } else {
+      setCustomDoctors(prev => {
+        const rawList = prev[hospitalId] || HOSPITALS[hospitalId]?.doctors || [];
+        // Deduplicate existing list first
+        const seen = new Set();
+        const cleaned = rawList.filter(d => {
+          const k = d.id || `${d.name?.toLowerCase().trim()}_${d.deptId}`;
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+
+        // Do not add if already present
+        if (cleaned.some(d => d.id === newDoctor.id || (d.name?.toLowerCase().trim() === newDoctor.name?.toLowerCase().trim() && d.deptId === newDoctor.deptId))) {
+          return { ...prev, [hospitalId]: cleaned };
+        }
+
+        const next = [...cleaned, newDoctor];
+        pushDoctorStatusToCloud(hospitalId, next);
+        if (HOSPITALS[hospitalId]) {
+          HOSPITALS[hospitalId].doctors = next;
+          saveCustomHospitals();
+          pushHospitalsToCloud();
+        }
+        return { ...prev, [hospitalId]: next };
+      });
+    }
+  }
+
+  // Delete doctor from a hospital (persisted to Firestore)
+  function handleDeleteDoctor(hospitalId, docId) {
+    if (hospitalId === 'H1') {
+      setDoctors(prev => {
+        const next = prev.filter(d => d.id !== docId);
+        pushDoctorStatusToCloud('H1', next);
+        return next;
+      });
+    } else if (hospitalId === 'H2') {
+      setH2Doctors(prev => {
+        const next = prev.filter(d => d.id !== docId);
+        pushDoctorStatusToCloud('H2', next);
+        return next;
+      });
+    } else {
+      setCustomDoctors(prev => {
+        const rawList = prev[hospitalId] || HOSPITALS[hospitalId]?.doctors || [];
+        const target = rawList.find(d => d.id === docId);
+        const next = rawList.filter(d => {
+          if (d.id === docId) return false;
+          // Also clean up any duplicate with identical name and department
+          if (target && d.name?.toLowerCase().trim() === target.name?.toLowerCase().trim() && d.deptId === target.deptId) return false;
+          return true;
+        });
+        pushDoctorStatusToCloud(hospitalId, next);
+        if (HOSPITALS[hospitalId]) {
+          HOSPITALS[hospitalId].doctors = next;
+          saveCustomHospitals();
+          pushHospitalsToCloud();
+        }
+        return { ...prev, [hospitalId]: next };
+      });
+    }
+  }
+
+  // Add department to a hospital (persisted to Firestore)
+  function handleAddDepartment(hospitalId, newDept) {
+    if (HOSPITALS[hospitalId]) {
+      if (!HOSPITALS[hospitalId].departments) {
+        HOSPITALS[hospitalId].departments = [];
+      }
+      HOSPITALS[hospitalId].departments = [...HOSPITALS[hospitalId].departments, newDept];
+      saveCustomHospitals();
+      pushHospitalsToCloud();
+      refreshData();
     }
   }
 
@@ -329,10 +445,7 @@ export default function App() {
               if (customHid) activeHid = customHid;
             }
           }
-          const activeDepts =
-            HOSPITALS[activeHid]?.departments?.length
-              ? HOSPITALS[activeHid].departments
-              : buildDeptsFromGraph(activeHid);
+          const activeDepts = getEffectiveDepartments(activeHid);
           const activeDoctors =
             activeHid === 'H1' ? doctors
             : activeHid === 'H2' ? h2Doctors
@@ -377,6 +490,9 @@ export default function App() {
             h2Doctors={h2Doctors}
             customDoctors={customDoctors}
             onUpdateDoctorStatus={handleUpdateDoctorStatus}
+            onAddDoctor={handleAddDoctor}
+            onDeleteDoctor={handleDeleteDoctor}
+            onAddDepartment={handleAddDepartment}
             onBackToApp={() => { 
               setAdminRole(null); 
               setAdminHospitalId(null); 

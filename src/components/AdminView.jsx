@@ -1,10 +1,11 @@
-import { useState, lazy, Suspense } from 'react';
-import { HOSPITAL_LOCATIONS, HOSPITAL_INFO, HOSPITALS, ADMIN_ROLES, saveCustomHospitals } from '../data/hospitalData';
+import { useState, useMemo, lazy, Suspense } from 'react';
+import { HOSPITAL_LOCATIONS, HOSPITAL_INFO, HOSPITALS, ADMIN_ROLES, saveCustomHospitals, getEffectiveDepartments } from '../data/hospitalData';
 import { pushHospitalsToCloud } from '../data/firebaseSync';
 import { loadGraph } from '../data/mapGraphStore';
 import {
   QrCode, Printer, Download, UserCheck, ArrowLeft,
   CheckCircle2, Clock, XCircle, Search, Sparkles, Map, Crown, Building2,
+  Plus, Trash2, X, Stethoscope, PlusCircle, Layers, AlertCircle,
 } from 'lucide-react';
 
 // Lazy-load the Konva map editor (only for Super Admin)
@@ -52,23 +53,170 @@ function getStatusBadge(status) {
   }
 }
 
-// ── Doctor Attendance Panel ────────────────────────────────────────────────────
-function DoctorPanel({ doctors, departments, hospitalId, onUpdateDoctorStatus }) {
+// ── Doctor Attendance & Department Management Panel ─────────────────────────────
+function DoctorPanel({
+  doctors = [],
+  departments = [],
+  hospitalId,
+  onUpdateDoctorStatus,
+  onAddDoctor,
+  onDeleteDoctor,
+  onAddDepartment,
+}) {
   const [searchDoc, setSearchDoc]       = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
 
-  const filteredDoctors = doctors.filter(doc => {
+  // Modals state
+  const [showAddDocModal, setShowAddDocModal]   = useState(false);
+  const [showAddDeptModal, setShowAddDeptModal] = useState(false);
+
+  // New Doctor form
+  const [docName, setDocName]     = useState('');
+  const [docSpec, setDocSpec]     = useState('');
+  const [docDeptId, setDocDeptId] = useState('');
+  const [docStatus, setDocStatus] = useState('available');
+
+  // New Department form
+  const [deptName, setDeptName]           = useState('');
+  const [deptShortName, setDeptShortName] = useState('');
+  const [deptFloor, setDeptFloor]         = useState('Ground Floor');
+  const [deptWing, setDeptWing]           = useState('');
+  const [deptIcon, setDeptIcon]           = useState('🏥');
+  const [deptDesc, setDeptDesc]           = useState('');
+
+  // Deduplicate incoming doctors list by ID or name+deptId
+  const uniqueDoctors = useMemo(() => {
+    const seen = new Set();
+    return (doctors || []).filter(doc => {
+      const key = doc.id || `${doc.name?.toLowerCase().trim()}_${doc.deptId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [doctors]);
+
+  const filteredDoctors = uniqueDoctors.filter(doc => {
     const matchSearch = doc.name.toLowerCase().includes(searchDoc.toLowerCase()) ||
                         doc.spec.toLowerCase().includes(searchDoc.toLowerCase());
     const matchDept   = selectedDept === 'ALL' || doc.deptId === selectedDept;
     return matchSearch && matchDept;
   });
 
+  function openAddDoctorModal() {
+    setDocName('');
+    setDocSpec('');
+    if (selectedDept !== 'ALL') {
+      setDocDeptId(selectedDept);
+    } else if (departments.length > 0) {
+      setDocDeptId(departments[0].id);
+    } else {
+      setDocDeptId('');
+    }
+    setDocStatus('available');
+    setShowAddDocModal(true);
+  }
+
+  function handleSaveDoctor(e) {
+    e.preventDefault();
+    if (!docName.trim()) return alert('Please enter a doctor name.');
+    if (!docDeptId) return alert('Please select a department.');
+
+    // Prevent duplicate entries
+    const alreadyExists = uniqueDoctors.some(
+      d => d.name?.toLowerCase().trim() === docName.toLowerCase().trim() && d.deptId === docDeptId
+    );
+    if (alreadyExists) {
+      alert(`Dr. "${docName.trim()}" is already registered in this department.`);
+      return;
+    }
+
+    const newDoc = {
+      id: `${hospitalId}-DOC-${Date.now().toString(36).toUpperCase()}`,
+      name: docName.trim(),
+      spec: docSpec.trim() || 'General Specialist',
+      deptId: docDeptId,
+      status: docStatus,
+    };
+
+    if (onAddDoctor) onAddDoctor(hospitalId, newDoc);
+
+    // Reset & close
+    setDocName('');
+    setDocSpec('');
+    setDocDeptId('');
+    setDocStatus('available');
+    setShowAddDocModal(false);
+  }
+
+  function handleSaveDepartment(e) {
+    e.preventDefault();
+    if (!deptName.trim()) return alert('Please enter a department name.');
+
+    const newDept = {
+      id: `${hospitalId}-DEPT-${Date.now().toString(36).toUpperCase()}`,
+      name: deptName.trim(),
+      shortName: deptShortName.trim() || deptName.trim(),
+      floor: deptFloor || 'Ground Floor',
+      wing: deptWing.trim() || '',
+      icon: deptIcon || '🏥',
+      color: '#EAF2FB',
+      description: deptDesc.trim() || `${deptFloor} · Specialist Department`,
+    };
+
+    if (onAddDepartment) onAddDepartment(hospitalId, newDept);
+
+    // Automatically assign newly created department if doctor modal was open
+    setDocDeptId(newDept.id);
+
+    // Reset & close
+    setDeptName('');
+    setDeptShortName('');
+    setDeptFloor('Ground Floor');
+    setDeptWing('');
+    setDeptIcon('🏥');
+    setDeptDesc('');
+    setShowAddDeptModal(false);
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Search & Filter */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+      {/* Action Header: Add Doctor & Add Department */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexWrap: 'wrap', gap: 10, background: '#f8fafc', padding: '12px 14px',
+        borderRadius: 12, border: '1px solid #e2e8f0'
+      }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+            Doctor & Department Directory
+          </h3>
+          <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+            {uniqueDoctors.length} Doctor{uniqueDoctors.length !== 1 ? 's' : ''} &middot; {departments.length} Department{departments.length !== 1 ? 's' : ''} registered
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
+            onClick={() => setShowAddDeptModal(true)}
+          >
+            <Building2 size={15} /> + Add Department
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
+            onClick={openAddDoctorModal}
+          >
+            <Plus size={15} /> + Add Doctor
+          </button>
+        </div>
+      </div>
+
+      {/* Search & Filter Toolbar */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ flex: 1, minWidth: 180, position: 'relative' }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--color-text-muted)' }} />
           <input
             type="search"
@@ -85,16 +233,29 @@ function DoctorPanel({ doctors, departments, hospitalId, onUpdateDoctorStatus })
           style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--color-border)', background: '#fff', fontSize: '0.85rem', fontWeight: 600 }}
         >
           <option value="ALL">All Departments ({departments.length})</option>
-          {departments.map(d => <option key={d.id} value={d.id}>{d.shortName}</option>)}
+          {departments.map(d => (
+            <option key={d.id} value={d.id}>
+              {d.shortName || d.name} ({d.floor})
+            </option>
+          ))}
         </select>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, padding: '10px 14px', whiteSpace: 'nowrap' }}
+          onClick={openAddDoctorModal}
+          title="Add another doctor"
+        >
+          <Plus size={15} /> Add Doctor
+        </button>
       </div>
 
       {/* Stats row */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         {[
-          { label: 'Available',        count: doctors.filter(d => d.status === 'available').length,   color: '#06D6A0', bg: '#e6faf5' },
-          { label: 'In OPD / Surgery', count: doctors.filter(d => d.status === 'in_surgery').length,  color: '#f59e0b', bg: '#fef3c7' },
-          { label: 'On Leave',         count: doctors.filter(d => d.status === 'on_leave').length,    color: '#ef476f', bg: '#fde8ee' },
+          { label: 'Available',        count: uniqueDoctors.filter(d => d.status === 'available').length,   color: '#06D6A0', bg: '#e6faf5' },
+          { label: 'In OPD / Surgery', count: uniqueDoctors.filter(d => d.status === 'in_surgery').length,  color: '#f59e0b', bg: '#fef3c7' },
+          { label: 'On Leave',         count: uniqueDoctors.filter(d => d.status === 'on_leave').length,    color: '#ef476f', bg: '#fde8ee' },
         ].map(s => (
           <div key={s.label} style={{ flex: 1, minWidth: 100, background: s.bg, border: `1px solid ${s.color}33`, borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
             <div style={{ fontSize: '1.4rem', fontWeight: 800, color: s.color }}>{s.count}</div>
@@ -103,69 +264,429 @@ function DoctorPanel({ doctors, departments, hospitalId, onUpdateDoctorStatus })
         ))}
       </div>
 
-      {/* Doctor cards */}
+      {/* Doctor list / Empty states */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {filteredDoctors.length === 0 && (
+        {uniqueDoctors.length === 0 ? (
+          <div style={{
+            textAlign: 'center', padding: '36px 20px', background: '#f8fafc',
+            borderRadius: 16, border: '2px dashed #cbd5e1', display: 'flex',
+            flexDirection: 'column', alignItems: 'center', gap: 12
+          }}>
+            <div style={{ fontSize: '2.5rem' }}>🩺</div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>No doctors added yet</h4>
+              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b', maxWidth: 360 }}>
+                Add your hospital's specialist doctors so patients can find them, check live availability, and navigate to their clinic room.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={() => setShowAddDocModal(true)}
+              >
+                <Plus size={15} /> Add First Doctor
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={() => setShowAddDeptModal(true)}
+              >
+                <Building2 size={15} /> Add Department
+              </button>
+            </div>
+          </div>
+        ) : filteredDoctors.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 32, color: '#94a3b8', fontSize: '0.88rem' }}>
             No doctors match your search.
           </div>
-        )}
-        {filteredDoctors.map(doc => {
-          const dept      = departments.find(d => d.id === doc.deptId);
-          const statusCfg = getStatusBadge(doc.status);
-          return (
-            <div key={doc.id} className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#0f172a' }}>{doc.name}</h4>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-                    {doc.spec} &middot; <strong style={{ color: 'var(--color-primary)' }}>{dept?.shortName}</strong>
-                  </p>
+        ) : (
+          filteredDoctors.map(doc => {
+            const dept      = departments.find(d => d.id === doc.deptId || d.shortName === doc.deptId);
+            const statusCfg = getStatusBadge(doc.status);
+            return (
+              <div key={doc.id} className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#0f172a' }}>{doc.name}</h4>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                      {doc.spec} &middot; <strong style={{ color: 'var(--color-primary)' }}>{dept?.shortName || dept?.name || 'Clinic'}</strong>
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '4px 10px', borderRadius: 999,
+                      background: statusCfg.bg, color: statusCfg.color,
+                      fontSize: '0.75rem', fontWeight: 700,
+                    }}>
+                      {statusCfg.icon} {statusCfg.label}
+                    </span>
+                    {onDeleteDoctor && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to remove ${doc.name}?`)) {
+                            onDeleteDoctor(hospitalId, doc.id);
+                          }
+                        }}
+                        style={{
+                          background: 'transparent', border: 'none', cursor: 'pointer',
+                          color: '#ef4444', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center'
+                        }}
+                        title={`Remove ${doc.name}`}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: '4px 10px', borderRadius: 999,
-                  background: statusCfg.bg, color: statusCfg.color,
-                  fontSize: '0.75rem', fontWeight: 700,
-                }}>
-                  {statusCfg.icon} {statusCfg.label}
-                </span>
+
+                {/* Status toggle buttons */}
+                <div style={{ display: 'flex', gap: 6, borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
+                  <button
+                    className={`btn btn-sm ${doc.status === 'available' ? 'btn-accent' : 'btn-ghost'}`}
+                    style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                    onClick={() => onUpdateDoctorStatus(doc.id, 'available', hospitalId)}
+                  >
+                    <CheckCircle2 size={13} /> Available
+                  </button>
+                  <button
+                    className={`btn btn-sm ${doc.status === 'in_surgery' ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                    onClick={() => onUpdateDoctorStatus(doc.id, 'in_surgery', hospitalId)}
+                  >
+                    <Clock size={13} /> In OPD / Surgery
+                  </button>
+                  <button
+                    className={`btn btn-sm ${doc.status === 'on_leave' ? 'btn-danger' : 'btn-ghost'}`}
+                    style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                    onClick={() => onUpdateDoctorStatus(doc.id, 'on_leave', hospitalId)}
+                  >
+                    <XCircle size={13} /> On Leave
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+        {uniqueDoctors.length > 0 && (
+          <button
+            type="button"
+            onClick={openAddDoctorModal}
+            style={{
+              padding: '12px', borderRadius: 12, border: '2px dashed #93c5fd',
+              background: '#f0f9ff', color: '#0077B6', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              fontWeight: 700, fontSize: '0.88rem', transition: 'all 0.15s',
+              marginTop: 4
+            }}
+          >
+            <Plus size={18} /> + Add Another Doctor
+          </button>
+        )}
+      </div>
+
+      {/* ── Modal: Add New Doctor ────────────────────────────────────────── */}
+      {showAddDocModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 99999,
+          background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 20, maxWidth: 440, width: '100%', padding: 24,
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: 16
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#e0f2fe', color: '#0077B6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <UserCheck size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Add New Doctor</h3>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Register profile & clinic location</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddDocModal(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDoctor} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Doctor Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Dr. Ramesh Gupta"
+                  value={docName}
+                  onChange={e => setDocName(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none' }}
+                />
               </div>
 
-              {/* Status toggle buttons */}
-              <div style={{ display: 'flex', gap: 6, borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
-                <button
-                  className={`btn btn-sm ${doc.status === 'available' ? 'btn-accent' : 'btn-ghost'}`}
-                  style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                  onClick={() => onUpdateDoctorStatus(doc.id, 'available', hospitalId)}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Specialty / Role *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Chief Cardiologist, General Physician"
+                  value={docSpec}
+                  onChange={e => setDocSpec(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
+                    Department / Clinic *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddDeptModal(true); }}
+                    style={{ background: 'none', border: 'none', color: '#0077B6', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                  >
+                    + Create Department
+                  </button>
+                </div>
+                <select
+                  required
+                  value={docDeptId}
+                  onChange={e => {
+                    if (e.target.value === '__NEW__') {
+                      setShowAddDeptModal(true);
+                    } else {
+                      setDocDeptId(e.target.value);
+                    }
+                  }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', background: '#fff' }}
                 >
-                  <CheckCircle2 size={13} /> Available
+                  <option value="">-- Select Department --</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.icon || '🏥'} {d.name || d.shortName} ({d.floor})
+                    </option>
+                  ))}
+                  <option value="__NEW__">➕ + Create New Department...</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Initial Availability Status
+                </label>
+                <select
+                  value={docStatus}
+                  onChange={e => setDocStatus(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', background: '#fff' }}
+                >
+                  <option value="available">🟢 Available</option>
+                  <option value="in_surgery">🟡 In OPD / Surgery</option>
+                  <option value="on_leave">🔴 On Leave</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ flex: 1, padding: 10 }}
+                  onClick={() => setShowAddDocModal(false)}
+                >
+                  Cancel
                 </button>
                 <button
-                  className={`btn btn-sm ${doc.status === 'in_surgery' ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                  onClick={() => onUpdateDoctorStatus(doc.id, 'in_surgery', hospitalId)}
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1, padding: 10 }}
                 >
-                  <Clock size={13} /> In OPD / Surgery
-                </button>
-                <button
-                  className={`btn btn-sm ${doc.status === 'on_leave' ? 'btn-danger' : 'btn-ghost'}`}
-                  style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                  onClick={() => onUpdateDoctorStatus(doc.id, 'on_leave', hospitalId)}
-                >
-                  <XCircle size={13} /> On Leave
+                  Save Doctor
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Add New Department ────────────────────────────────────── */}
+      {showAddDeptModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100000,
+          background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 20, maxWidth: 440, width: '100%', padding: 24,
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: 16
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Building2 size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Add Department / Room</h3>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Define clinic destination for navigation</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddDeptModal(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={20} />
+              </button>
             </div>
-          );
-        })}
-      </div>
+
+            <form onSubmit={handleSaveDepartment} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Department Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Cardiology OPD, Pharmacy Counter"
+                  value={deptName}
+                  onChange={e => {
+                    setDeptName(e.target.value);
+                    if (!deptShortName) setDeptShortName(e.target.value);
+                  }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Short Label
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Cardiology"
+                    value={deptShortName}
+                    onChange={e => setDeptShortName(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Floor *
+                  </label>
+                  <select
+                    value={deptFloor}
+                    onChange={e => setDeptFloor(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', background: '#fff' }}
+                  >
+                    <option value="Ground Floor">Ground Floor</option>
+                    <option value="1st Floor">1st Floor</option>
+                    <option value="2nd Floor">2nd Floor</option>
+                    <option value="3rd Floor">3rd Floor</option>
+                    <option value="4th Floor">4th Floor</option>
+                    <option value="Basement B1">Basement B1</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Wing / Room (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Block A, Room 104"
+                  value={deptWing}
+                  onChange={e => setDeptWing(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Choose Icon
+                </label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {['🏥', '🩺', '🩻', '🧪', '❤️', '🦴', '💊', '👶', '🧠', '🔬', '🏃', '🍽️', '💧', '👂', '👁️', '🧴', '🦷'].map(icon => (
+                    <button
+                      key={icon}
+                      type="button"
+                      onClick={() => setDeptIcon(icon)}
+                      style={{
+                        width: 36, height: 36, borderRadius: 8, fontSize: '1.1rem',
+                        border: deptIcon === icon ? '2px solid #0077B6' : '1px solid #e2e8f0',
+                        background: deptIcon === icon ? '#e0f2fe' : '#f8fafc',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Brief Description
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Consultations, checkups & emergencies"
+                  value={deptDesc}
+                  onChange={e => setDeptDesc(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ flex: 1, padding: 10 }}
+                  onClick={() => setShowAddDeptModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1, padding: 10 }}
+                >
+                  Save Department
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function AdminView({ adminRole = 'super', adminHospitalId, doctors, h2Doctors, customDoctors = {}, onUpdateDoctorStatus, onBackToApp }) {
+export default function AdminView({
+  adminRole = 'super',
+  adminHospitalId,
+  doctors,
+  h2Doctors,
+  customDoctors = {},
+  onUpdateDoctorStatus,
+  onAddDoctor,
+  onDeleteDoctor,
+  onAddDepartment,
+  onBackToApp
+}) {
   const cfg = ROLE_CONFIG[adminRole] || ROLE_CONFIG.super;
 
   const isSuperAdmin    = adminRole === 'super';
@@ -184,7 +705,7 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
   // Get the data for the currently-viewed hospital
   const hospitalData    = HOSPITALS[viewingHospitalId] || HOSPITALS.H1;
   const hospitalInfo    = hospitalData.info;
-  const hospitalDepts   = hospitalData.departments || [];
+  const hospitalDepts   = getEffectiveDepartments(viewingHospitalId);
   const hospitalDoctors = viewingHospitalId === 'H1' ? doctors
     : viewingHospitalId === 'H2' ? h2Doctors
     : (customDoctors[viewingHospitalId] || HOSPITALS[viewingHospitalId]?.doctors || []);
@@ -482,6 +1003,9 @@ export default function AdminView({ adminRole = 'super', adminHospitalId, doctor
           departments={hospitalDepts}
           hospitalId={viewingHospitalId}
           onUpdateDoctorStatus={onUpdateDoctorStatus}
+          onAddDoctor={onAddDoctor}
+          onDeleteDoctor={onDeleteDoctor}
+          onAddDepartment={onAddDepartment}
         />
       )}
 
